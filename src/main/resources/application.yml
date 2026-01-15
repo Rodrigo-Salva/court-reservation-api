@@ -1,0 +1,125 @@
+spring:
+  application:
+    name: court-reservation-system
+
+  # Perfil activo
+  profiles:
+    active: dev
+
+---
+# Configuración para desarrollo
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:h2:mem:courtdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Configuración de la aplicación
+app:
+  business-rules:
+    booking:
+      min-advance-hours: 2
+      min-duration-hours: 1
+      max-duration-hours: 4
+      operation-start-time: "06:00"
+      operation-end-time: "23:00"
+      max-days-advance:
+        no-membership: 7
+        basic: 14
+        premium: 30
+        vip: 30
+    pricing:
+      peak-hours-multiplier: 1.5
+      peak-hours-start: "18:00"
+      peak-hours-end: "22:00"
+      weekend-multiplier: 1.3
+      holiday-multiplier: 1.4
+      valley-hours-multiplier: 0.8
+      valley-hours-start: "06:00"
+      valley-hours-end: "12:00"
+      recurrent-discount: 0.05
+    membership:
+      basic-discount: 0.10
+      premium-discount: 0.20
+      vip-discount: 0.30
+    cancellation:
+      penalty-24h: 0.0
+      penalty-12h: 0.3
+      penalty-late: 0.5
+      penalty-noshow: 1.0
+      vip-grace-hours: 12
+    waitlist:
+      notification-timeout-minutes: 30
+
+# Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+
+logging:
+  level:
+    com.sportsbooking: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+---
+# Configuración para producción
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/courtdb
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.sportsbooking: INFO
