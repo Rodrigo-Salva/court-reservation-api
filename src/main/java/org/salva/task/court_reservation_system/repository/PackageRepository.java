@@ -22,7 +22,7 @@ public interface PackageRepository extends JpaRepository<Package, Long> {
     /**
      * Busca paquetes por rango de horas
      */
-    List<Package> findByHoursQuantityBetweenAndActiveTrue(Integer minHours, Integer maxHours);
+    List<Package> findByAmountHoursBetweenAndActiveTrue(Integer minHours, Integer maxHours);
 
     /**
      * Busca paquetes ordenados por mejor descuento
@@ -41,5 +41,5 @@ public interface PackageRepository extends JpaRepository<Package, Long> {
     /**
      * Busca paquetes con descuento mayor o igual al especificado
      */
-    List<Package> findByDiscountPercentageGreaterThanEqualAndActiveTrue(BigDecimal minDiscount);
+    List<Package> findByDiscountPercentGreaterThanEqualAndActiveTrue(BigDecimal minDiscount);
 }

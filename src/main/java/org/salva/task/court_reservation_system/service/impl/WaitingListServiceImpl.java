@@ -3,7 +3,6 @@ package org.salva.task.court_reservation_system.service.impl;
 import org.salva.task.court_reservation_system.dto.request.WaitingListRequestDTO;
 import org.salva.task.court_reservation_system.dto.response.WaitingListResponseDTO;
 import org.salva.task.court_reservation_system.entity.Court;
-import org.salva.task.court_reservation_system.entity.User;
 import org.salva.task.court_reservation_system.entity.WaitingList;
 import org.salva.task.court_reservation_system.exception.BusinessException;
 import org.salva.task.court_reservation_system.exception.ResourceNotFoundException;
@@ -12,6 +11,7 @@ import org.salva.task.court_reservation_system.repository.CourtRepository;
 import org.salva.task.court_reservation_system.repository.UserRepository;
 import org.salva.task.court_reservation_system.repository.WaitingListRepository;
 import org.salva.task.court_reservation_system.service.WaitingListService;
+import org.salva.task.court_reservation_system.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -185,7 +185,7 @@ public class WaitingListServiceImpl implements WaitingListService {
 
                 // Notificar al siguiente en la lista (RN-034)
                 processCancellationNotification(
-                        waiting.getCourt().getId(),
+                        (long) waiting.getCourt().getId(),
                         waiting.getDesiredDate(),
                         waiting.getDesiredStartTime(),
                         waiting.getDesiredEndTime()
@@ -228,7 +228,7 @@ public class WaitingListServiceImpl implements WaitingListService {
         }
 
         List<WaitingList> allWaiting = waitingListRepository.findPendingByCourtAndTimeSlot(
-                waitingList.getCourt().getId(),
+                (long) waitingList.getCourt().getId(),
                 waitingList.getDesiredDate(),
                 waitingList.getDesiredStartTime(),
                 waitingList.getDesiredEndTime()

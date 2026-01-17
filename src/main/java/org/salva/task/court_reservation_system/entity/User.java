@@ -33,7 +33,7 @@ public class User {
     @NotBlank(message = "El teléfono es obligatorio")
     @Pattern(regexp = "^[0-9]{9,15}$", message = "El teléfono debe tener entre 9 y 15 dígitos")
     @Column(nullable = false, length = 15)
-    private String phoneNumber;
+    private String phone;
 
     @NotNull(message = "El tipo de membresía es obligatorio")
     @Enumerated(EnumType.STRING)
@@ -41,7 +41,7 @@ public class User {
     private MembershipType membershipType = MembershipType.NINGUNA;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime recordDate;
+    private LocalDateTime registrationDate;
 
     @Column(nullable = false)
     private Boolean active;
@@ -52,6 +52,6 @@ public class User {
      */
     @PrePersist
     protected void onCreate() {
-        recordDate = LocalDateTime.now();
+        registrationDate = LocalDateTime.now();
     }
 }

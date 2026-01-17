@@ -1,6 +1,7 @@
 package org.salva.task.court_reservation_system.repository;
 
-import org.apache.catalina.User;
+
+import org.salva.task.court_reservation_system.entity.User;
 import org.salva.task.court_reservation_system.enums.MembershipType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

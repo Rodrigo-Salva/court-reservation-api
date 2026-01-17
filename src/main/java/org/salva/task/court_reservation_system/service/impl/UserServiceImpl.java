@@ -119,7 +119,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // Validar teléfono único (si cambió)
-        if (!user.getPhoneNumber().equals(requestDTO.getPhone()) &&
+        if (!user.getPhone().equals(requestDTO.getPhone()) &&
                 userRepository.existsByPhone(requestDTO.getPhone())) {
             throw new ValidationException("Ya existe un usuario con el teléfono: " + requestDTO.getPhone());
         }

@@ -101,7 +101,7 @@ public class CourtServiceImpl implements CourtService {
         }
 
         // Aquí podrías usar el query personalizado del repository
-        List<Court> courts = courtRepository.findByBasePricePerHourLessThanEqualAndActiveTrue(maxPrice);
+        List<Court> courts = courtRepository.findByPriceBaseHourLessThanEqualAndActiveTrue(maxPrice);
 
         return courtMapper.toResponseDTOList(courts);
     }

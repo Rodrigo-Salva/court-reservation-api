@@ -38,6 +38,6 @@ public class CourtAvailabilityResponseDTO {
         private LocalTime endTime;
 
         private BigDecimal estimatedPrice;  // Solo para available
-        private Double priceFactor;         // 0.8 (valle), 1.0 (normal), 1.5 (pico)
+        private BigDecimal priceFactor;         // 0.8 (valle), 1.0 (normal), 1.5 (pico)
     }
 }

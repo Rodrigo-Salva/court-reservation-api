@@ -38,7 +38,7 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
     /**
      * Busca canchas con precio base menor o igual al especificado
      */
-    List<Court> findByBasePricePerHourLessThanEqualAndActiveTrue(BigDecimal maxPrice);
+    List<Court> findByPriceBaseHourLessThanEqualAndActiveTrue(BigDecimal maxPrice);
 
     /**
      * Busca canchas por capacidad mínima
