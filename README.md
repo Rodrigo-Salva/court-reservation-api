@@ -1,6 +1,6 @@
-# 🏀 Court Reservation System - Documentación Completa
+# Court Reservation System - Documentación Completa
 
-## 📋 Tabla de Contenidos
+## Tabla de Contenidos
 
 1. [Descripción General](#descripción-general)
 2. [Arquitectura del Sistema](#arquitectura-del-sistema)
@@ -15,7 +15,7 @@
 
 ---
 
-## 📖 Descripción General
+## Descripción General
 
 **Court Reservation System** es un sistema completo de gestión de reservas para canchas deportivas desarrollado con **Spring Boot 3.2.1** y **Java 21**. El sistema implementa funcionalidades avanzadas como:
 
