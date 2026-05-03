@@ -19,14 +19,14 @@
 
 **Court Reservation System** es un sistema completo de gestión de reservas para canchas deportivas desarrollado con **Spring Boot 3.2.1** y **Java 21**. El sistema implementa funcionalidades avanzadas como:
 
-- ✅ Sistema de precios dinámicos (horario pico, valle, fin de semana)
-- ✅ Gestión de membresías (BASIC, PREMIUM, VIP)
-- ✅ Paquetes de horas prepagadas con descuentos
-- ✅ Reservas recurrentes (semanales)
-- ✅ Sistema de cancelaciones con penalizaciones progresivas
-- ✅ Lista de espera con notificaciones automáticas
-- ✅ Validaciones exhaustivas de disponibilidad
-- ✅ Jobs automáticos para mantenimiento
+-  Sistema de precios dinámicos (horario pico, valle, fin de semana)
+-  Gestión de membresías (BASIC, PREMIUM, VIP)
+-  Paquetes de horas prepagadas con descuentos
+-  Reservas recurrentes (semanales)
+-  Sistema de cancelaciones con penalizaciones progresivas
+-  Lista de espera con notificaciones automáticas
+-  Validaciones exhaustivas de disponibilidad
+-  Jobs automáticos para mantenimiento
 
 ---
 
