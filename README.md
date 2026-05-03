@@ -210,11 +210,11 @@ TOTAL FINAL:     $351.00
 ```
 Usuario solicita: Todos los Martes 18:00-20:00 por 8 semanas
 Resultado:
-✅ Semana 1: Reservado
-✅ Semana 2: Reservado
-❌ Semana 3: Ocupado (se omite)
-✅ Semana 4: Reservado
-✅ Semana 5: Reservado
+Semana 1: Reservado
+Semana 2: Reservado
+Semana 3: Ocupado (se omite)
+Semana 4: Reservado
+Semana 5: Reservado
 ...
 Total: 7 reservas creadas, 1 omitida
 ```
