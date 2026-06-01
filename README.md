@@ -1,4 +1,4 @@
-# Court Reservation System - Documentación Completa
+# Court Reservation System - Documentación que esta Completa
 
 ## Tabla de Contenidos
 
