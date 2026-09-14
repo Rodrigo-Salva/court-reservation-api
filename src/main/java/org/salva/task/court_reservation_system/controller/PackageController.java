@@ -45,6 +45,13 @@ public class PackageController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/all")
+    @Operation(summary = "Listar todos los paquetes (admin)", description = "Incluye paquetes inactivos, solo para administración")
+    public ResponseEntity<List<PackageResponseDTO>> getAllPackages() {
+        List<PackageResponseDTO> response = packageService.getAllPackages();
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/best-discount")
     @Operation(summary = "Obtener paquetes ordenados por mejor descuento")
     public ResponseEntity<List<PackageResponseDTO>> getPackagesByBestDiscount() {
@@ -74,5 +81,12 @@ public class PackageController {
     public ResponseEntity<Void> deactivatePackage(@PathVariable Long id) {
         packageService.deactivatePackage(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/activate")
+    @Operation(summary = "Activar paquete", description = "Reactiva un paquete previamente desactivado")
+    public ResponseEntity<Void> activatePackage(@PathVariable Long id) {
+        packageService.activatePackage(id);
+        return ResponseEntity.ok().build();
     }
 }

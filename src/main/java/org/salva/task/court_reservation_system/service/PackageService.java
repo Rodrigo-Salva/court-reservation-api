@@ -26,6 +26,11 @@ public interface PackageService {
     List<PackageResponseDTO> getAllActivePackages();
 
     /**
+     * Obtiene todos los paquetes, incluidos los inactivos (solo admin)
+     */
+    List<PackageResponseDTO> getAllPackages();
+
+    /**
      * Obtiene paquetes ordenados por mejor descuento
      */
     List<PackageResponseDTO> getPackagesOrderedByBestDiscount();
@@ -44,4 +49,9 @@ public interface PackageService {
      * Desactiva un paquete
      */
     void deactivatePackage(Long id);
+
+    /**
+     * Reactiva un paquete previamente desactivado
+     */
+    void activatePackage(Long id);
 }

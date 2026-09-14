@@ -58,6 +58,16 @@ public class PackageServiceImpl implements PackageService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<PackageResponseDTO> getAllPackages() {
+        log.debug("Getting all packages (including inactive)");
+
+        List<Package> packages = packageRepository.findAll();
+
+        return packageMapper.toResponseDTOList(packages);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<PackageResponseDTO> getPackagesOrderedByBestDiscount() {
         log.debug("Getting packages ordered by best discount");
 
@@ -102,5 +112,18 @@ public class PackageServiceImpl implements PackageService {
         packageRepository.save(pkg);
 
         log.info("Package deactivated successfully with id: {}", id);
+    }
+
+    @Override
+    public void activatePackage(Long id) {
+        log.info("Activating package with id: {}", id);
+
+        Package pkg = packageRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Paquete no encontrado con id: " + id));
+
+        pkg.setActive(true);
+        packageRepository.save(pkg);
+
+        log.info("Package activated successfully with id: {}", id);
     }
 }
