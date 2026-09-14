@@ -24,7 +24,7 @@ public class Court {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @NotBlank(message = "El tipo de deporte es obligatorio")
+    @NotNull(message = "El tipo de deporte es obligatorio")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private SportType sportType;
@@ -40,6 +40,7 @@ public class Court {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal priceBaseHour;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
 
