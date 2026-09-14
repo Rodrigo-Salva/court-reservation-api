@@ -32,6 +32,11 @@ public interface UserService {
     List<UserResponseDTO> getAllActiveUsers();
 
     /**
+     * Obtiene todos los usuarios, incluidos los inactivos (solo admin)
+     */
+    List<UserResponseDTO> getAllUsers();
+
+    /**
      * Busca usuarios por nombre
      */
     List<UserResponseDTO> searchUsersByName(String name);
@@ -55,6 +60,11 @@ public interface UserService {
      * Desactiva un usuario (soft delete)
      */
     void deactivateUser(Long id);
+
+    /**
+     * Reactiva un usuario previamente desactivado
+     */
+    void activateUser(Long id);
 
     /**
      * Verifica si un email ya está registrado

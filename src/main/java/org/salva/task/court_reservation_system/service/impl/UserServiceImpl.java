@@ -87,6 +87,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<UserResponseDTO> getAllUsers() {
+        log.debug("Getting all users (including inactive)");
+
+        List<User> users = userRepository.findAll();
+
+        return userMapper.toResponseDTOList(users);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<UserResponseDTO> searchUsersByName(String name) {
         log.debug("Searching users by name: {}", name);
 
@@ -160,6 +170,19 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         log.info("User deactivated successfully with id: {}", id);
+    }
+
+    @Override
+    public void activateUser(Long id) {
+        log.info("Activating user with id: {}", id);
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+
+        user.setActive(true);
+        userRepository.save(user);
+
+        log.info("User activated successfully with id: {}", id);
     }
 
     @Override

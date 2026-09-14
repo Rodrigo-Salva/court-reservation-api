@@ -53,6 +53,20 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/all")
+    @Operation(summary = "Listar todos los usuarios (admin)", description = "Incluye usuarios inactivos, solo para administración")
+    public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
+        List<UserResponseDTO> response = userService.getAllUsers();
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}/activate")
+    @Operation(summary = "Activar usuario", description = "Reactiva un usuario previamente desactivado")
+    public ResponseEntity<Void> activateUser(@PathVariable Long id) {
+        userService.activateUser(id);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/search")
     @Operation(summary = "Buscar usuarios por nombre")
     public ResponseEntity<List<UserResponseDTO>> searchUsersByName(@RequestParam String name) {
