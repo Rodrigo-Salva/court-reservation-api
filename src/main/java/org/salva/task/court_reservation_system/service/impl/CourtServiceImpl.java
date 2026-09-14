@@ -73,6 +73,16 @@ public class CourtServiceImpl implements CourtService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<CourtResponseDTO> getAllCourts() {
+        log.debug("Getting all courts (including inactive)");
+
+        List<Court> courts = courtRepository.findAll();
+
+        return courtMapper.toResponseDTOList(courts);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<CourtResponseDTO> getCourtsBySportType(SportType sportType) {
         log.debug("Getting courts by sport type: {}", sportType);
 

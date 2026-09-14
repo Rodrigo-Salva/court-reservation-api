@@ -47,6 +47,13 @@ public class CourtController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/all")
+    @Operation(summary = "Listar todas las canchas (admin)", description = "Incluye canchas inactivas, solo para administración")
+    public ResponseEntity<List<CourtResponseDTO>> getAllCourts() {
+        List<CourtResponseDTO> response = courtService.getAllCourts();
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/sport-type/{sportType}")
     @Operation(summary = "Obtener canchas por tipo de deporte")
     public ResponseEntity<List<CourtResponseDTO>> getCourtsBySportType(@PathVariable SportType sportType) {

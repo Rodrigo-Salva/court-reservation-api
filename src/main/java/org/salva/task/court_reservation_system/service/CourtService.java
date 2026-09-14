@@ -28,6 +28,11 @@ public interface CourtService {
     List<CourtResponseDTO> getAllActiveCourts();
 
     /**
+     * Obtiene todas las canchas, incluidas las inactivas (solo admin)
+     */
+    List<CourtResponseDTO> getAllCourts();
+
+    /**
      * Obtiene canchas por tipo de deporte
      */
     List<CourtResponseDTO> getCourtsBySportType(SportType sportType);
