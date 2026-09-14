@@ -69,8 +69,9 @@ public class Booking {
     @Column(name = "base_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal basePrice;
 
+    // Puede ser negativo: en horario valle (RN-009) el factor dinamico es < 1,
+    // es decir, un descuento en vez de un recargo.
     @NotNull
-    @DecimalMin(value = "0.0")
     @Column(name = "dynamic_surcharges", nullable = false, precision = 10, scale = 2)
     private BigDecimal dynamicSurcharges;
 
@@ -86,9 +87,11 @@ public class Booking {
 
     // ========== RECURRENCIA ==========
 
+    @Builder.Default
     @Column(name = "is_recurrent", nullable = false)
     private Boolean isRecurrent = false;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "recurrence_frequency", length = 20)
     private RecurrenceFrequency recurrenceFrequency = RecurrenceFrequency.NINGUNA;
@@ -98,6 +101,7 @@ public class Booking {
 
     // ========== USO DE PAQUETE ==========
 
+    @Builder.Default
     @Column(name = "uses_package", nullable = false)
     private Boolean usesPackage = false;
 
