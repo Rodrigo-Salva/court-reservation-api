@@ -16,7 +16,7 @@ import java.time.LocalTime;
 @Builder
 public class BookingRequestDTO {
 
-    @NotNull(message = "El ID del usuario es obligatorio")
+    // Se asigna automáticamente desde el token JWT
     private Long userId;
 
     @NotNull(message = "El ID de la cancha es obligatorio")

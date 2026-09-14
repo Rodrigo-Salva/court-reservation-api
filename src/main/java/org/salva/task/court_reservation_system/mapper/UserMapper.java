@@ -33,5 +33,7 @@ public interface UserMapper {
     User toEntity(UserRequestDTO requestDTO);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "password", ignore = true)
+    @Mapping(target = "role", ignore = true)
     void updateEntityFromDTO(UserRequestDTO requestDTO, @MappingTarget User user);
 }

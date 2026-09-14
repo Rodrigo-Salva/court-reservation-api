@@ -40,6 +40,13 @@ public class User {
     @Column(nullable = false, length = 20)
     private MembershipType membershipType = MembershipType.NINGUNA;
 
+    @Column(nullable = false)
+    private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private org.salva.task.court_reservation_system.enums.Role role = org.salva.task.court_reservation_system.enums.Role.USER;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime registrationDate;
 

@@ -17,7 +17,7 @@ import java.time.LocalTime;
 @Builder
 public class RecurrentBookingRequestDTO {
 
-    @NotNull(message = "El ID del usuario es obligatorio")
+    // Se asigna desde JWT
     private Long userId;
 
     @NotNull(message = "El ID de la cancha es obligatorio")

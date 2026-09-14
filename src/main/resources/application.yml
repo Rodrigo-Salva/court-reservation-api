@@ -7,7 +7,7 @@ spring:
     active: dev
 
 ---
-# Configuración para desarrollo
+# Configuraciï¿½n para desarrollo
 spring:
   config:
     activate:
@@ -44,8 +44,10 @@ server:
     include-message: always
     include-binding-errors: always
 
-# Configuración de la aplicación
+# Configuraciï¿½n de la aplicaciï¿½n
 app:
+  cors:
+    allowed-origins: http://localhost:3000
   business-rules:
     booking:
       min-advance-hours: 2
@@ -97,7 +99,7 @@ logging:
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 ---
-# Configuración para producción
+# Configuraciï¿½n para producciï¿½n
 spring:
   config:
     activate:
