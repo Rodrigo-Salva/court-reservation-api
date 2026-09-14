@@ -20,23 +20,23 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Court Reservation System API")
+                        .title("API del Sistema de Reservas de Canchas")
                         .version("1.0.0")
                         .description("Sistema de Reservas para Canchas Deportivas con gestión de precios dinámicos, " +
                                 "paquetes prepagados, cancelaciones con penalizaciones y lista de espera.")
                         .contact(new Contact()
-                                .name("API Support")
-                                .email("support@sportsbooking.com"))
+                                .name("Soporte de la API")
+                                .email("soporte@sportsbooking.com"))
                         .license(new License()
                                 .name("Apache 2.0")
                                 .url("https://www.apache.org/licenses/LICENSE-2.0")))
                 .servers(List.of(
                         new Server()
                                 .url("http://localhost:8080")
-                                .description("Development Server"),
+                                .description("Servidor de Desarrollo"),
                         new Server()
                                 .url("https://api.sportsbooking.com")
-                                .description("Production Server")
+                                .description("Servidor de Producción")
                 ));
     }
 }
