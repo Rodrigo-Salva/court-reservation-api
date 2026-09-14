@@ -58,6 +58,7 @@ public class UserPackage {
     @Column(name = "expiration_date", nullable = false)
     private LocalDateTime expirationDate;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
 

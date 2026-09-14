@@ -18,6 +18,8 @@ public interface PackageMapper {
     /**
      * Convierte entidad a DTO con campos calculados
      */
+    @Mapping(target = "hoursQuantity", source = "amountHours")
+    @Mapping(target = "discountPercentage", source = "discountPercent")
     @Mapping(target = "pricePerHour", expression = "java(calculatePricePerHour(pkg))")
     @Mapping(target = "savings", expression = "java(calculateSavings(pkg))")
     PackageResponseDTO toResponseDTO(Package pkg);
@@ -26,8 +28,12 @@ public interface PackageMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "active", constant = "true")
+    @Mapping(target = "amountHours", source = "hoursQuantity")
+    @Mapping(target = "discountPercent", source = "discountPercentage")
     Package toEntity(PackageRequestDTO requestDTO);
 
+    @Mapping(target = "amountHours", source = "hoursQuantity")
+    @Mapping(target = "discountPercent", source = "discountPercentage")
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateEntityFromDTO(PackageRequestDTO requestDTO, @MappingTarget Package pkg);
 

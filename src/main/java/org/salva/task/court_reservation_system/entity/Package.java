@@ -47,6 +47,7 @@ public class Package {
     @Column(nullable = false)
     private Integer validityDays;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
 }
