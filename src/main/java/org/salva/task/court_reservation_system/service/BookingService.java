@@ -35,6 +35,11 @@ public interface BookingService {
     List<BookingResponseDTO> getBookingsByUser(Long userId);
 
     /**
+     * Obtiene todas las reservas del sistema (solo admin)
+     */
+    List<BookingResponseDTO> getAllBookings();
+
+    /**
      * Obtiene reservas de un usuario filtradas por estado
      */
     List<BookingResponseDTO> getBookingsByUserAndStatus(Long userId, BookingStatus status);

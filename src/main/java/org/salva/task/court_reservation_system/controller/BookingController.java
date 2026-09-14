@@ -58,6 +58,13 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping
+    @Operation(summary = "Listar todas las reservas (admin)")
+    public ResponseEntity<List<BookingResponseDTO>> getAllBookings() {
+        List<BookingResponseDTO> response = bookingService.getAllBookings();
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/user/{userId}")
     @Operation(summary = "Obtener todas las reservas de un usuario")
     public ResponseEntity<List<BookingResponseDTO>> getBookingsByUser(@PathVariable Long userId) {

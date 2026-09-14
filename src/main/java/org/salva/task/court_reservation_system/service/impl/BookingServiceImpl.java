@@ -206,6 +206,16 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<BookingResponseDTO> getAllBookings() {
+        log.debug("Getting all bookings (admin)");
+
+        List<Booking> bookings = bookingRepository.findAll();
+
+        return bookingMapper.toResponseDTOList(bookings);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<BookingResponseDTO> getBookingsByUserAndStatus(Long userId, BookingStatus status) {
         log.debug("Getting bookings for user: {} with status: {}", userId, status);
 
