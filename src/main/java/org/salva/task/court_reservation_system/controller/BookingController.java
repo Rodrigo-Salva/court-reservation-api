@@ -31,7 +31,11 @@ public class BookingController {
 
     @PostMapping
     @Operation(summary = "Crear una reserva simple", description = "Crea una nueva reserva validando disponibilidad y calculando precios")
-    public ResponseEntity<BookingResponseDTO> createBooking(@Valid @RequestBody BookingRequestDTO requestDTO) {
+    public ResponseEntity<BookingResponseDTO> createBooking(
+            @Valid @RequestBody BookingRequestDTO requestDTO,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.salva.task.court_reservation_system.security.CustomUserDetails userDetails
+    ) {
+        requestDTO.setUserId(userDetails.getId());
         BookingResponseDTO response = bookingService.createBooking(requestDTO);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -39,8 +43,10 @@ public class BookingController {
     @PostMapping("/recurrent")
     @Operation(summary = "Crear reservas recurrentes", description = "Crea múltiples reservas semanales automáticamente")
     public ResponseEntity<RecurrentBookingResponseDTO> createRecurrentBooking(
-            @Valid @RequestBody RecurrentBookingRequestDTO requestDTO
+            @Valid @RequestBody RecurrentBookingRequestDTO requestDTO,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.salva.task.court_reservation_system.security.CustomUserDetails userDetails
     ) {
+        requestDTO.setUserId(userDetails.getId());
         RecurrentBookingResponseDTO response = bookingService.createRecurrentBooking(requestDTO);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
