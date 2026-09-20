@@ -15,6 +15,8 @@ import java.math.BigDecimal;
 public class CourtResponseDTO {
 
     private Long id;
+    private Long venueId;
+    private String venueName;
     private String name;
     private SportType sportType;
     private Integer capacity;

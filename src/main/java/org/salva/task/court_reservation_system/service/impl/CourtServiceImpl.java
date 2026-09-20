@@ -8,6 +8,9 @@ import org.salva.task.court_reservation_system.exception.ResourceNotFoundExcepti
 import org.salva.task.court_reservation_system.exception.ValidationException;
 import org.salva.task.court_reservation_system.mapper.CourtMapper;
 import org.salva.task.court_reservation_system.repository.CourtRepository;
+import org.salva.task.court_reservation_system.repository.VenueRepository;
+import org.salva.task.court_reservation_system.security.AccessControlService;
+import org.salva.task.court_reservation_system.security.CustomUserDetails;
 import org.salva.task.court_reservation_system.service.CourtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,9 +31,11 @@ public class CourtServiceImpl implements CourtService {
 
     private final CourtRepository courtRepository;
     private final CourtMapper courtMapper;
+    private final VenueRepository venueRepository;
+    private final AccessControlService accessControl;
 
     @Override
-    public CourtResponseDTO createCourt(CourtRequestDTO requestDTO) {
+    public CourtResponseDTO createCourt(CourtRequestDTO requestDTO, CustomUserDetails currentUser) {
         log.info("Creating court with name: {}", requestDTO.getName());
 
         // Validar que no exista una cancha con el mismo nombre
@@ -40,6 +45,18 @@ public class CourtServiceImpl implements CourtService {
 
         // Mapper: DTO → Entity
         Court court = courtMapper.toEntity(requestDTO);
+        Long venueId = requestDTO.getVenueId();
+        Long staffVenueId = accessControl.resolveVenueFilter(currentUser);
+        if (staffVenueId != null) {
+            if (venueId != null) {
+                accessControl.requireSameVenueOrAdmin(venueId, currentUser);
+            }
+            venueId = staffVenueId;
+        }
+        if (venueId != null) {
+            court.setVenue(venueRepository.findById(venueId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sede no encontrada")));
+        }
 
         // Guardar
         court = courtRepository.save(court);
@@ -73,10 +90,11 @@ public class CourtServiceImpl implements CourtService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CourtResponseDTO> getAllCourts() {
+    public List<CourtResponseDTO> getAllCourts(CustomUserDetails currentUser) {
         log.debug("Getting all courts (including inactive)");
 
-        List<Court> courts = courtRepository.findAll();
+        Long venueId = accessControl.resolveVenueFilter(currentUser);
+        List<Court> courts = venueId == null ? courtRepository.findAll() : courtRepository.findByVenueId(venueId);
 
         return courtMapper.toResponseDTOList(courts);
     }
@@ -117,12 +135,16 @@ public class CourtServiceImpl implements CourtService {
     }
 
     @Override
-    public CourtResponseDTO updateCourt(Long id, CourtRequestDTO requestDTO) {
+    public CourtResponseDTO updateCourt(Long id, CourtRequestDTO requestDTO, CustomUserDetails currentUser) {
         log.info("Updating court with id: {}", id);
 
         // Buscar cancha existente
         Court court = courtRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cancha no encontrada con id: " + id));
+        accessControl.requireSameVenueOrAdmin(venueIdOf(court), currentUser);
+        if (requestDTO.getVenueId() != null) {
+            accessControl.requireSameVenueOrAdmin(requestDTO.getVenueId(), currentUser);
+        }
 
         // Validar nombre único (si cambió)
         if (!court.getName().equals(requestDTO.getName()) &&
@@ -132,6 +154,10 @@ public class CourtServiceImpl implements CourtService {
 
         // Mapper: actualiza solo campos no-null
         courtMapper.updateEntityFromDTO(requestDTO, court);
+        if (requestDTO.getVenueId() != null) {
+            court.setVenue(venueRepository.findById(requestDTO.getVenueId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Sede no encontrada")));
+        }
 
         // Guardar
         court = courtRepository.save(court);
@@ -142,11 +168,12 @@ public class CourtServiceImpl implements CourtService {
     }
 
     @Override
-    public void deactivateCourt(Long id) {
+    public void deactivateCourt(Long id, CustomUserDetails currentUser) {
         log.info("Deactivating court with id: {}", id);
 
         Court court = courtRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cancha no encontrada con id: " + id));
+        accessControl.requireSameVenueOrAdmin(venueIdOf(court), currentUser);
 
         court.setActive(false);
         courtRepository.save(court);
@@ -155,15 +182,20 @@ public class CourtServiceImpl implements CourtService {
     }
 
     @Override
-    public void activateCourt(Long id) {
+    public void activateCourt(Long id, CustomUserDetails currentUser) {
         log.info("Activating court with id: {}", id);
 
         Court court = courtRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cancha no encontrada con id: " + id));
+        accessControl.requireSameVenueOrAdmin(venueIdOf(court), currentUser);
 
         court.setActive(true);
         courtRepository.save(court);
 
         log.info("Court activated successfully with id: {}", id);
+    }
+
+    private Long venueIdOf(Court court) {
+        return court.getVenue() != null ? court.getVenue().getId() : null;
     }
 }

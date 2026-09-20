@@ -46,4 +46,8 @@ public class Court {
 
     @Size(max = 500, message = "La descripción no puede exceder 500 caracteres")
     private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "venue_id", foreignKey = @ForeignKey(name = "fk_court_venue"))
+    private Venue venue;
 }

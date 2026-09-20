@@ -3,6 +3,7 @@ package org.salva.task.court_reservation_system.controller;
 import org.salva.task.court_reservation_system.dto.request.CourtRequestDTO;
 import org.salva.task.court_reservation_system.dto.response.CourtResponseDTO;
 import org.salva.task.court_reservation_system.enums.SportType;
+import org.salva.task.court_reservation_system.security.CustomUserDetails;
 import org.salva.task.court_reservation_system.service.CourtService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -10,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -28,8 +30,9 @@ public class CourtController {
 
     @PostMapping
     @Operation(summary = "Crear una nueva cancha", description = "Crea una nueva cancha en el sistema")
-    public ResponseEntity<CourtResponseDTO> createCourt(@Valid @RequestBody CourtRequestDTO requestDTO) {
-        CourtResponseDTO response = courtService.createCourt(requestDTO);
+    public ResponseEntity<CourtResponseDTO> createCourt(@Valid @RequestBody CourtRequestDTO requestDTO,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        CourtResponseDTO response = courtService.createCourt(requestDTO, currentUser);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -49,8 +52,8 @@ public class CourtController {
 
     @GetMapping("/all")
     @Operation(summary = "Listar todas las canchas (admin)", description = "Incluye canchas inactivas, solo para administración")
-    public ResponseEntity<List<CourtResponseDTO>> getAllCourts() {
-        List<CourtResponseDTO> response = courtService.getAllCourts();
+    public ResponseEntity<List<CourtResponseDTO>> getAllCourts(@AuthenticationPrincipal CustomUserDetails currentUser) {
+        List<CourtResponseDTO> response = courtService.getAllCourts(currentUser);
         return ResponseEntity.ok(response);
     }
 
@@ -82,23 +85,26 @@ public class CourtController {
     @Operation(summary = "Actualizar cancha", description = "Actualiza los datos de una cancha existente")
     public ResponseEntity<CourtResponseDTO> updateCourt(
             @PathVariable Long id,
-            @Valid @RequestBody CourtRequestDTO requestDTO
+            @Valid @RequestBody CourtRequestDTO requestDTO,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
-        CourtResponseDTO response = courtService.updateCourt(id, requestDTO);
+        CourtResponseDTO response = courtService.updateCourt(id, requestDTO, currentUser);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Desactivar cancha", description = "Desactiva una cancha (soft delete)")
-    public ResponseEntity<Void> deactivateCourt(@PathVariable Long id) {
-        courtService.deactivateCourt(id);
+    public ResponseEntity<Void> deactivateCourt(@PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        courtService.deactivateCourt(id, currentUser);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/activate")
     @Operation(summary = "Activar cancha", description = "Reactiva una cancha previamente desactivada")
-    public ResponseEntity<Void> activateCourt(@PathVariable Long id) {
-        courtService.activateCourt(id);
+    public ResponseEntity<Void> activateCourt(@PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        courtService.activateCourt(id, currentUser);
         return ResponseEntity.ok().build();
     }
 }

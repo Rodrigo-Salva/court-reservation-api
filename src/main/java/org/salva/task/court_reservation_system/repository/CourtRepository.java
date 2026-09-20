@@ -3,6 +3,7 @@ package org.salva.task.court_reservation_system.repository;
 import org.salva.task.court_reservation_system.entity.Court;
 import org.salva.task.court_reservation_system.enums.SportType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
 
 /**
  * Repository para operaciones de base de datos de Court
@@ -17,11 +19,18 @@ import java.util.Optional;
 @Repository
 public interface CourtRepository extends JpaRepository<Court, Long> {
 
+    /** Serializa las reservas concurrentes de la misma cancha. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM Court c WHERE c.id = :id")
+    Optional<Court> findByIdForBooking(@Param("id") Long id);
+
     /**
      * Busca todas las canchas activas
      * Query generado: SELECT * FROM courts WHERE activa = true
      */
     List<Court> findByActiveTrue();
+
+    List<Court> findByVenueId(Long venueId);
 
     /**
      * Busca canchas por tipo de deporte

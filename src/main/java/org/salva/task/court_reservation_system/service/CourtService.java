@@ -3,6 +3,7 @@ package org.salva.task.court_reservation_system.service;
 import org.salva.task.court_reservation_system.dto.request.CourtRequestDTO;
 import org.salva.task.court_reservation_system.dto.response.CourtResponseDTO;
 import org.salva.task.court_reservation_system.enums.SportType;
+import org.salva.task.court_reservation_system.security.CustomUserDetails;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,7 +16,7 @@ public interface CourtService {
     /**
      * Crea una nueva cancha
      */
-    CourtResponseDTO createCourt(CourtRequestDTO requestDTO);
+    CourtResponseDTO createCourt(CourtRequestDTO requestDTO, CustomUserDetails currentUser);
 
     /**
      * Obtiene una cancha por ID
@@ -30,7 +31,7 @@ public interface CourtService {
     /**
      * Obtiene todas las canchas, incluidas las inactivas (solo admin)
      */
-    List<CourtResponseDTO> getAllCourts();
+    List<CourtResponseDTO> getAllCourts(CustomUserDetails currentUser);
 
     /**
      * Obtiene canchas por tipo de deporte
@@ -50,16 +51,16 @@ public interface CourtService {
     /**
      * Actualiza una cancha existente
      */
-    CourtResponseDTO updateCourt(Long id, CourtRequestDTO requestDTO);
+    CourtResponseDTO updateCourt(Long id, CourtRequestDTO requestDTO, CustomUserDetails currentUser);
 
     /**
      * Desactiva una cancha (soft delete)
      */
-    void deactivateCourt(Long id);
+    void deactivateCourt(Long id, CustomUserDetails currentUser);
 
     /**
      * Activa una cancha
      */
-    void activateCourt(Long id);
+    void activateCourt(Long id, CustomUserDetails currentUser);
 }
 

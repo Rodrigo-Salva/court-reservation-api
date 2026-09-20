@@ -17,6 +17,8 @@ public interface CourtMapper {
      * Convierte entidad a DTO de respuesta
      */
     @Mapping(target = "basePricePerHour", source = "priceBaseHour")
+    @Mapping(target = "venueId", source = "venue.id")
+    @Mapping(target = "venueName", source = "venue.name")
     CourtResponseDTO toResponseDTO(Court court);
 
     /**
@@ -28,6 +30,7 @@ public interface CourtMapper {
      * Convierte DTO de request a entidad (para crear)
      */
     @Mapping(target = "priceBaseHour", source = "basePricePerHour")
+    @Mapping(target = "venue", ignore = true)
     Court toEntity(CourtRequestDTO requestDTO);
 
     /**
@@ -36,6 +39,7 @@ public interface CourtMapper {
      * @param court Entidad existente a actualizar
      */
     @Mapping(target = "priceBaseHour", source = "basePricePerHour")
+    @Mapping(target = "venue", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateEntityFromDTO(CourtRequestDTO requestDTO, @MappingTarget Court court);
 }
