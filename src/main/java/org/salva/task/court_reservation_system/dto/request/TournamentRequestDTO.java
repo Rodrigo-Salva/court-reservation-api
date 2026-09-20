@@ -1,0 +1,2 @@
+package org.salva.task.court_reservation_system.dto.request; import jakarta.validation.constraints.*; import lombok.Data; import org.salva.task.court_reservation_system.enums.SportType; import java.time.LocalDate;
+@Data public class TournamentRequestDTO { @NotBlank @Size(max=100) private String name; @NotNull private SportType sportType; @NotNull @FutureOrPresent private LocalDate startDate; @NotNull @Min(2) @Max(64) private Integer maxParticipants; }

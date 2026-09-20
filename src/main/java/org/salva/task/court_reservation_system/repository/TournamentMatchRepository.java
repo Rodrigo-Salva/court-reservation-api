@@ -1,0 +1,1 @@
+package org.salva.task.court_reservation_system.repository; import org.salva.task.court_reservation_system.entity.TournamentMatch; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface TournamentMatchRepository extends JpaRepository<TournamentMatch,Long>{List<TournamentMatch> findByTournamentId(Long id);}
