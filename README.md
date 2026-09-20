@@ -1026,6 +1026,20 @@ Response: 204 No Content
 
 ## 🚀 Instalación y Configuración
 
+### Variables de entorno obligatorias
+
+El backend no contiene secretos JWT ni credenciales de producción. Copia `.env.example` como referencia y configura las variables en tu terminal o plataforma de despliegue. Spring Boot no carga archivos `.env` automáticamente.
+
+```powershell
+# Desarrollo local (PowerShell): genera una clave nueva antes de iniciar.
+$bytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+$env:JWT_SECRET = [Convert]::ToBase64String($bytes)
+mvn spring-boot:run
+```
+
+Para producción configura `SPRING_PROFILES_ACTIVE=prod`, `JWT_SECRET`, `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` y `CORS_ALLOWED_ORIGINS`. El perfil de producción no carga datos demo ni contraseñas predefinidas.
+
 ### Requisitos Previos
 
 - **Java 21** (OpenJDK o Oracle JDK)
