@@ -19,6 +19,9 @@ import org.salva.task.court_reservation_system.repository.BookingRepository;
 import org.salva.task.court_reservation_system.repository.CourtRepository;
 import org.salva.task.court_reservation_system.repository.UserPackageRepository;
 import org.salva.task.court_reservation_system.repository.UserRepository;
+import org.salva.task.court_reservation_system.repository.CourtBlockRepository;
+import org.salva.task.court_reservation_system.service.AuditService;
+import org.salva.task.court_reservation_system.service.NotificationService;
 import org.salva.task.court_reservation_system.service.impl.BookingServiceImpl;
 
 import java.math.BigDecimal;
@@ -44,6 +47,12 @@ class BookingServiceImplTest {
     private UserPackageRepository userPackageRepository;
     @Mock
     private BookingMapper bookingMapper;
+    @Mock
+    private CourtBlockRepository courtBlockRepository;
+    @Mock
+    private AuditService auditService;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private BookingServiceImpl bookingService;
@@ -80,7 +89,7 @@ class BookingServiceImplTest {
     void createBooking_Success() {
         // Arrange
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(courtRepository.findById(1L)).thenReturn(Optional.of(testCourt));
+        when(courtRepository.findByIdForBooking(1L)).thenReturn(Optional.of(testCourt));
         
         when(bookingRepository.existsOverlappingBooking(
                 eq(1L), any(LocalDate.class), any(LocalTime.class), any(LocalTime.class)
@@ -115,7 +124,7 @@ class BookingServiceImplTest {
         assertEquals(BookingStatus.CONFIRMADA, result.getStatus());
         
         verify(userRepository).findById(1L);
-        verify(courtRepository).findById(1L);
+        verify(courtRepository).findByIdForBooking(1L);
         verify(bookingRepository).save(any(Booking.class));
     }
 
@@ -124,7 +133,7 @@ class BookingServiceImplTest {
     void createBooking_OverlapException() {
         // Arrange
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(courtRepository.findById(1L)).thenReturn(Optional.of(testCourt));
+        when(courtRepository.findByIdForBooking(1L)).thenReturn(Optional.of(testCourt));
         
         when(bookingRepository.existsOverlappingBooking(
                 eq(1L), any(LocalDate.class), any(LocalTime.class), any(LocalTime.class)

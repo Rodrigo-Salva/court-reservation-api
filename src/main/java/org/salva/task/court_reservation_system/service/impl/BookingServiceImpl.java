@@ -3,6 +3,8 @@ package org.salva.task.court_reservation_system.service.impl;
 import org.salva.task.court_reservation_system.dto.request.BookingRequestDTO;
 import org.salva.task.court_reservation_system.dto.request.CancellationRequestDTO;
 import org.salva.task.court_reservation_system.dto.request.RecurrentBookingRequestDTO;
+import org.salva.task.court_reservation_system.dto.request.RescheduleBookingRequestDTO;
+import org.salva.task.court_reservation_system.dto.request.CheckInRequestDTO;
 import org.salva.task.court_reservation_system.dto.response.*;
 import org.salva.task.court_reservation_system.entity.*;
 import org.salva.task.court_reservation_system.enums.BookingStatus;
@@ -13,6 +15,9 @@ import org.salva.task.court_reservation_system.exception.ValidationException;
 import org.salva.task.court_reservation_system.mapper.BookingMapper;
 import org.salva.task.court_reservation_system.repository.*;
 import org.salva.task.court_reservation_system.service.BookingService;
+import org.salva.task.court_reservation_system.service.AuditService;
+import org.salva.task.court_reservation_system.service.NotificationService;
+import org.salva.task.court_reservation_system.enums.NotificationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,7 +40,10 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final CourtRepository courtRepository;
     private final UserPackageRepository userPackageRepository;
+    private final CourtBlockRepository courtBlockRepository;
     private final BookingMapper bookingMapper;
+    private final AuditService auditService;
+    private final NotificationService notificationService;
 
     // Constantes de configuración (idealmente desde application.yml)
     private static final int MIN_ADVANCE_HOURS = 2;
@@ -54,7 +62,7 @@ public class BookingServiceImpl implements BookingService {
 
         // 1. Obtener entidades
         User user = getUserOrThrow(requestDTO.getUserId());
-        Court court = getCourtOrThrow(requestDTO.getCourtId());
+        Court court = getCourtForBookingOrThrow(requestDTO.getCourtId());
 
         // 2. Validaciones de reglas de negocio
         validateBookingRules(requestDTO, user, court);
@@ -75,6 +83,8 @@ public class BookingServiceImpl implements BookingService {
 
         // 6. Guardar
         booking = bookingRepository.save(booking);
+        auditService.record("CREAR", "RESERVA", booking.getId(), "Reserva creada para cancha " + court.getId(), venueIdOf(court));
+        notificationService.notify(user, NotificationType.RESERVA_CREADA, "Reserva confirmada", "Tu reserva en " + court.getName() + " fue confirmada.");
 
         log.info("Booking created successfully with id: {}", booking.getId());
 
@@ -87,7 +97,7 @@ public class BookingServiceImpl implements BookingService {
                 requestDTO.getUserId(), requestDTO.getCourtId());
 
         User user = getUserOrThrow(requestDTO.getUserId());
-        Court court = getCourtOrThrow(requestDTO.getCourtId());
+        Court court = getCourtForBookingOrThrow(requestDTO.getCourtId());
 
         List<RecurrentBookingResponseDTO.RecurrentBookingDetail> details = new ArrayList<>();
         int successCount = 0;
@@ -106,12 +116,13 @@ public class BookingServiceImpl implements BookingService {
                         currentDate,
                         requestDTO.getStartTime(),
                         requestDTO.getEndTime()
-                )) {
+                ) || courtBlockRepository.existsOverlappingBlock(requestDTO.getCourtId(), currentDate,
+                        requestDTO.getStartTime(), requestDTO.getEndTime())) {
                     // Cancha ocupada
                     details.add(RecurrentBookingResponseDTO.RecurrentBookingDetail.builder()
                             .bookingDate(currentDate)
                             .status("FAILED")
-                            .reason("Cancha no disponible en ese horario")
+                            .reason("Cancha no disponible o bloqueada en ese horario")
                             .build());
                     failCount++;
 
@@ -206,10 +217,10 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<BookingResponseDTO> getAllBookings() {
-        log.debug("Getting all bookings (admin)");
+    public List<BookingResponseDTO> getAllBookings(Long venueId) {
+        log.debug("Getting all bookings (admin), venue filter: {}", venueId);
 
-        List<Booking> bookings = bookingRepository.findAll();
+        List<Booking> bookings = venueId == null ? bookingRepository.findAll() : bookingRepository.findByCourtVenueId(venueId);
 
         return bookingMapper.toResponseDTOList(bookings);
     }
@@ -335,6 +346,8 @@ public class BookingServiceImpl implements BookingService {
         booking.setPenaltyAmount(penaltyAmount);
 
         bookingRepository.save(booking);
+        auditService.record("CANCELAR", "RESERVA", booking.getId(), "Reserva cancelada", venueIdOf(booking.getCourt()));
+        notificationService.notify(booking.getUser(), NotificationType.CANCELACION, "Reserva cancelada", "Tu reserva en " + booking.getCourt().getName() + " fue cancelada.");
 
         // Manejar paquete (devolver horas si no hay penalización tardía)
         Integer hoursRefunded = null;
@@ -427,6 +440,10 @@ public class BookingServiceImpl implements BookingService {
                 requestDTO.getEndTime()
         )) {
             throw new BusinessException("Ya existe una reserva en ese horario");
+        }
+        if (courtBlockRepository.existsOverlappingBlock(requestDTO.getCourtId(), requestDTO.getBookingDate(),
+                requestDTO.getStartTime(), requestDTO.getEndTime())) {
+            throw new BusinessException("La cancha está bloqueada por mantenimiento, feriado o evento");
         }
     }
 
@@ -557,6 +574,10 @@ public class BookingServiceImpl implements BookingService {
         UserPackage userPackage = userPackageRepository.findById(userPackageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Paquete no encontrado"));
 
+        if (!userPackage.getUser().getId().equals(booking.getUser().getId())) {
+            throw new BusinessException("El paquete no pertenece al usuario de la reserva");
+        }
+
         int hours = (int) ChronoUnit.HOURS.between(booking.getStartTime(), booking.getEndTime());
 
         if (!userPackage.deductHours(hours)) {
@@ -602,6 +623,112 @@ public class BookingServiceImpl implements BookingService {
 
     private Court getCourtOrThrow(Long courtId) {
         return courtRepository.findById(courtId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cancha no encontrada con id: " + courtId));
+    }
+
+    private void validateReschedule(Booking booking, RescheduleBookingRequestDTO requestDTO) {
+        LocalDateTime bookingDateTime = LocalDateTime.of(requestDTO.getBookingDate(), requestDTO.getStartTime());
+        if (ChronoUnit.HOURS.between(LocalDateTime.now(), bookingDateTime) < MIN_ADVANCE_HOURS) {
+            throw new ValidationException("Debe reprogramar con al menos " + MIN_ADVANCE_HOURS + " horas de anticipación");
+        }
+        long duration = ChronoUnit.HOURS.between(requestDTO.getStartTime(), requestDTO.getEndTime());
+        if (duration < MIN_DURATION_HOURS || duration > MAX_DURATION_HOURS ||
+                requestDTO.getStartTime().isBefore(OPERATION_START_TIME) ||
+                requestDTO.getEndTime().isAfter(OPERATION_END_TIME)) {
+            throw new ValidationException("El nuevo horario no cumple las reglas de duración u operación");
+        }
+        long daysUntilBooking = ChronoUnit.DAYS.between(LocalDate.now(), requestDTO.getBookingDate());
+        if (daysUntilBooking > booking.getUser().getMembershipType().getMaxDaysAdvance()) {
+            throw new ValidationException("La nueva fecha supera el límite de anticipación de su membresía");
+        }
+        if (bookingRepository.existsOverlappingBookingExcludingId((long) booking.getCourt().getId(),
+                requestDTO.getBookingDate(), requestDTO.getStartTime(), requestDTO.getEndTime(), booking.getId())) {
+            throw new BusinessException("Ya existe una reserva en el nuevo horario");
+        }
+        if (courtBlockRepository.existsOverlappingBlock((long) booking.getCourt().getId(), requestDTO.getBookingDate(),
+                requestDTO.getStartTime(), requestDTO.getEndTime())) {
+            throw new BusinessException("La cancha está bloqueada en el nuevo horario");
+        }
+    }
+
+    @Override
+    public BookingResponseDTO rescheduleBooking(Long id, RescheduleBookingRequestDTO requestDTO) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada"));
+        if (booking.getStatus() != BookingStatus.CONFIRMADA) {
+            throw new BusinessException("Solo se pueden reprogramar reservas confirmadas");
+        }
+        if (Boolean.TRUE.equals(booking.getUsesPackage()) &&
+                !Duration.between(requestDTO.getStartTime(), requestDTO.getEndTime())
+                        .equals(Duration.between(booking.getStartTime(), booking.getEndTime()))) {
+            throw new ValidationException("Una reserva pagada con paquete solo puede reprogramarse con la misma duración");
+        }
+        validateReschedule(booking, requestDTO);
+        booking.setBookingDate(requestDTO.getBookingDate());
+        booking.setStartTime(requestDTO.getStartTime());
+        booking.setEndTime(requestDTO.getEndTime());
+        calculateAndSetPrices(booking, booking.getCourt(), booking.getUser(), Boolean.TRUE.equals(booking.getIsRecurrent()));
+        if (Boolean.TRUE.equals(booking.getUsesPackage())) {
+            booking.setTotalPrice(BigDecimal.ZERO);
+        }
+        Booking savedBooking = bookingRepository.save(booking);
+        auditService.record("REPROGRAMAR", "RESERVA", savedBooking.getId(), "Reserva reprogramada", venueIdOf(savedBooking.getCourt()));
+        notificationService.notify(savedBooking.getUser(), NotificationType.REPROGRAMACION, "Reserva reprogramada", "Tu reserva en " + savedBooking.getCourt().getName() + " fue actualizada.");
+        return bookingMapper.toResponseDTO(savedBooking);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CheckInCodeResponseDTO getCheckInCode(Long id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada"));
+        return CheckInCodeResponseDTO.builder().bookingId(id).code(booking.getCheckInCode()).build();
+    }
+
+    @Override
+    public void checkIn(Long id, CheckInRequestDTO requestDTO) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada"));
+        if (booking.getStatus() != BookingStatus.CONFIRMADA || booking.getCheckedInAt() != null) {
+            throw new BusinessException("La reserva no está disponible para check-in");
+        }
+        if (!booking.getCheckInCode().equals(requestDTO.getCode())) {
+            throw new ValidationException("Código de check-in inválido");
+        }
+        booking.setCheckedInAt(LocalDateTime.now());
+        bookingRepository.save(booking);
+        auditService.record("CHECK_IN", "RESERVA", booking.getId(), "Check-in registrado", venueIdOf(booking.getCourt()));
+        notificationService.notify(booking.getUser(), NotificationType.CHECK_IN, "Check-in registrado", "Tu ingreso a " + booking.getCourt().getName() + " fue registrado.");
+    }
+
+    @Override
+    public void markNoShow(Long id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada"));
+        if (booking.getStatus() != BookingStatus.CONFIRMADA || booking.getCheckedInAt() != null) {
+            throw new BusinessException("Solo una reserva confirmada sin check-in puede marcarse como no-show");
+        }
+        booking.setStatus(BookingStatus.NO_SHOW);
+        booking.setPenaltyPercentage(BigDecimal.ONE);
+        booking.setPenaltyAmount(booking.getTotalPrice());
+        bookingRepository.save(booking);
+        auditService.record("NO_SHOW", "RESERVA", booking.getId(), "Reserva marcada como no-show", venueIdOf(booking.getCourt()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long getVenueIdOfBooking(Long id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada"));
+        return venueIdOf(booking.getCourt());
+    }
+
+    private Long venueIdOf(Court court) {
+        return court.getVenue() != null ? court.getVenue().getId() : null;
+    }
+
+    private Court getCourtForBookingOrThrow(Long courtId) {
+        return courtRepository.findByIdForBooking(courtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cancha no encontrada con id: " + courtId));
     }
 

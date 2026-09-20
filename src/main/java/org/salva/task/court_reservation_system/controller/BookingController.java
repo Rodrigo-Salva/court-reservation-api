@@ -3,6 +3,8 @@ package org.salva.task.court_reservation_system.controller;
 import org.salva.task.court_reservation_system.dto.request.BookingRequestDTO;
 import org.salva.task.court_reservation_system.dto.request.CancellationRequestDTO;
 import org.salva.task.court_reservation_system.dto.request.RecurrentBookingRequestDTO;
+import org.salva.task.court_reservation_system.dto.request.RescheduleBookingRequestDTO;
+import org.salva.task.court_reservation_system.dto.request.CheckInRequestDTO;
 import org.salva.task.court_reservation_system.dto.response.*;
 import org.salva.task.court_reservation_system.enums.BookingStatus;
 import org.salva.task.court_reservation_system.service.BookingService;
@@ -17,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import org.salva.task.court_reservation_system.security.AccessControlService;
+import org.salva.task.court_reservation_system.security.CustomUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 /**
  * Controller para gestión de reservas
@@ -28,12 +33,13 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final AccessControlService accessControl;
 
     @PostMapping
     @Operation(summary = "Crear una reserva simple", description = "Crea una nueva reserva validando disponibilidad y calculando precios")
     public ResponseEntity<BookingResponseDTO> createBooking(
             @Valid @RequestBody BookingRequestDTO requestDTO,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal org.salva.task.court_reservation_system.security.CustomUserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         requestDTO.setUserId(userDetails.getId());
         BookingResponseDTO response = bookingService.createBooking(requestDTO);
@@ -44,7 +50,7 @@ public class BookingController {
     @Operation(summary = "Crear reservas recurrentes", description = "Crea múltiples reservas semanales automáticamente")
     public ResponseEntity<RecurrentBookingResponseDTO> createRecurrentBooking(
             @Valid @RequestBody RecurrentBookingRequestDTO requestDTO,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal org.salva.task.court_reservation_system.security.CustomUserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         requestDTO.setUserId(userDetails.getId());
         RecurrentBookingResponseDTO response = bookingService.createRecurrentBooking(requestDTO);
@@ -53,21 +59,25 @@ public class BookingController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener reserva por ID", description = "Obtiene los detalles completos de una reserva")
-    public ResponseEntity<BookingDetailResponseDTO> getBookingById(@PathVariable Long id) {
+    public ResponseEntity<BookingDetailResponseDTO> getBookingById(@PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         BookingDetailResponseDTO response = bookingService.getBookingById(id);
+        accessControl.requireOwnerOrAdmin(response.getUserId(), userDetails);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping
     @Operation(summary = "Listar todas las reservas (admin)")
-    public ResponseEntity<List<BookingResponseDTO>> getAllBookings() {
-        List<BookingResponseDTO> response = bookingService.getAllBookings();
+    public ResponseEntity<List<BookingResponseDTO>> getAllBookings(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        List<BookingResponseDTO> response = bookingService.getAllBookings(accessControl.resolveVenueFilter(userDetails));
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{userId}")
     @Operation(summary = "Obtener todas las reservas de un usuario")
-    public ResponseEntity<List<BookingResponseDTO>> getBookingsByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<BookingResponseDTO>> getBookingsByUser(@PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accessControl.requireOwnerOrAdmin(userId, userDetails);
         List<BookingResponseDTO> response = bookingService.getBookingsByUser(userId);
         return ResponseEntity.ok(response);
     }
@@ -76,15 +86,19 @@ public class BookingController {
     @Operation(summary = "Obtener reservas de un usuario por estado")
     public ResponseEntity<List<BookingResponseDTO>> getBookingsByUserAndStatus(
             @PathVariable Long userId,
-            @PathVariable BookingStatus status
+            @PathVariable BookingStatus status,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        accessControl.requireOwnerOrAdmin(userId, userDetails);
         List<BookingResponseDTO> response = bookingService.getBookingsByUserAndStatus(userId, status);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{userId}/future")
     @Operation(summary = "Obtener reservas futuras de un usuario")
-    public ResponseEntity<List<BookingResponseDTO>> getFutureBookingsByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<BookingResponseDTO>> getFutureBookingsByUser(@PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accessControl.requireOwnerOrAdmin(userId, userDetails);
         List<BookingResponseDTO> response = bookingService.getFutureBookingsByUser(userId);
         return ResponseEntity.ok(response);
     }
@@ -114,9 +128,46 @@ public class BookingController {
     @PutMapping("/cancel")
     @Operation(summary = "Cancelar una reserva", description = "Cancela una reserva aplicando penalizaciones según anticipación")
     public ResponseEntity<CancellationResponseDTO> cancelBooking(
-            @Valid @RequestBody CancellationRequestDTO requestDTO
+            @Valid @RequestBody CancellationRequestDTO requestDTO,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        accessControl.requireOwnerOrAdmin(bookingService.getBookingById(requestDTO.getBookingId()).getUserId(), userDetails);
         CancellationResponseDTO response = bookingService.cancelBooking(requestDTO);
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}/reschedule")
+    @Operation(summary = "Reprogramar una reserva")
+    public ResponseEntity<BookingResponseDTO> rescheduleBooking(@PathVariable Long id,
+            @Valid @RequestBody RescheduleBookingRequestDTO requestDTO,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accessControl.requireOwnerOrAdmin(bookingService.getBookingById(id).getUserId(), userDetails);
+        return ResponseEntity.ok(bookingService.rescheduleBooking(id, requestDTO));
+    }
+
+    @GetMapping("/{id}/check-in-code")
+    @Operation(summary = "Obtener código QR de check-in")
+    public ResponseEntity<CheckInCodeResponseDTO> getCheckInCode(@PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accessControl.requireOwnerOrAdmin(bookingService.getBookingById(id).getUserId(), userDetails);
+        return ResponseEntity.ok(bookingService.getCheckInCode(id));
+    }
+
+    @PutMapping("/{id}/check-in")
+    @Operation(summary = "Registrar check-in mediante código QR")
+    public ResponseEntity<Void> checkIn(@PathVariable Long id, @Valid @RequestBody CheckInRequestDTO requestDTO,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accessControl.requireSameVenueOrAdmin(bookingService.getVenueIdOfBooking(id), userDetails);
+        bookingService.checkIn(id, requestDTO);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/no-show")
+    @Operation(summary = "Marcar reserva como no-show")
+    public ResponseEntity<Void> markNoShow(@PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accessControl.requireSameVenueOrAdmin(bookingService.getVenueIdOfBooking(id), userDetails);
+        bookingService.markNoShow(id);
+        return ResponseEntity.noContent().build();
     }
 }

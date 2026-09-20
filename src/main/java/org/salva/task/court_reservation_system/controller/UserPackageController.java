@@ -12,6 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.salva.task.court_reservation_system.security.AccessControlService;
+import org.salva.task.court_reservation_system.security.CustomUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 /**
  * Controller para gestión de paquetes de usuario
@@ -23,40 +26,51 @@ import java.util.List;
 public class UserPackageController {
 
     private final UserPackageService userPackageService;
+    private final AccessControlService accessControl;
 
     @PostMapping("/purchase")
     @Operation(summary = "Comprar un paquete", description = "Usuario compra un paquete de horas prepagadas")
     public ResponseEntity<UserPackageResponseDTO> purchasePackage(
-            @Valid @RequestBody PackagePurchaseRequestDTO requestDTO
+            @Valid @RequestBody PackagePurchaseRequestDTO requestDTO,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        requestDTO.setUserId(userDetails.getId());
         UserPackageResponseDTO response = userPackageService.purchasePackage(requestDTO);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener paquete de usuario por ID")
-    public ResponseEntity<UserPackageResponseDTO> getUserPackageById(@PathVariable Long id) {
+    public ResponseEntity<UserPackageResponseDTO> getUserPackageById(@PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         UserPackageResponseDTO response = userPackageService.getUserPackageById(id);
+        accessControl.requireOwnerOrAdmin(response.getUserId(), userDetails);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{userId}")
     @Operation(summary = "Obtener todos los paquetes de un usuario")
-    public ResponseEntity<List<UserPackageResponseDTO>> getAllPackagesByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<UserPackageResponseDTO>> getAllPackagesByUser(@PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accessControl.requireOwnerOrAdmin(userId, userDetails);
         List<UserPackageResponseDTO> response = userPackageService.getAllPackagesByUser(userId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{userId}/active")
     @Operation(summary = "Obtener paquetes activos de un usuario")
-    public ResponseEntity<List<UserPackageResponseDTO>> getActivePackagesByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<UserPackageResponseDTO>> getActivePackagesByUser(@PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accessControl.requireOwnerOrAdmin(userId, userDetails);
         List<UserPackageResponseDTO> response = userPackageService.getActivePackagesByUser(userId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{userId}/best-available")
     @Operation(summary = "Obtener el mejor paquete disponible del usuario")
-    public ResponseEntity<UserPackageResponseDTO> getBestAvailablePackage(@PathVariable Long userId) {
+    public ResponseEntity<UserPackageResponseDTO> getBestAvailablePackage(@PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accessControl.requireOwnerOrAdmin(userId, userDetails);
         UserPackageResponseDTO response = userPackageService.getBestAvailablePackage(userId);
         return ResponseEntity.ok(response);
     }

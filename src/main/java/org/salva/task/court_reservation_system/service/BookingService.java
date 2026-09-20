@@ -3,6 +3,8 @@ package org.salva.task.court_reservation_system.service;
 import org.salva.task.court_reservation_system.dto.request.BookingRequestDTO;
 import org.salva.task.court_reservation_system.dto.request.CancellationRequestDTO;
 import org.salva.task.court_reservation_system.dto.request.RecurrentBookingRequestDTO;
+import org.salva.task.court_reservation_system.dto.request.RescheduleBookingRequestDTO;
+import org.salva.task.court_reservation_system.dto.request.CheckInRequestDTO;
 import org.salva.task.court_reservation_system.dto.response.*;
 import org.salva.task.court_reservation_system.enums.BookingStatus;
 
@@ -37,7 +39,7 @@ public interface BookingService {
     /**
      * Obtiene todas las reservas del sistema (solo admin)
      */
-    List<BookingResponseDTO> getAllBookings();
+    List<BookingResponseDTO> getAllBookings(Long venueId);
 
     /**
      * Obtiene reservas de un usuario filtradas por estado
@@ -64,8 +66,18 @@ public interface BookingService {
      */
     CancellationResponseDTO cancelBooking(CancellationRequestDTO requestDTO);
 
+    BookingResponseDTO rescheduleBooking(Long id, RescheduleBookingRequestDTO requestDTO);
+    CheckInCodeResponseDTO getCheckInCode(Long id);
+    void checkIn(Long id, CheckInRequestDTO requestDTO);
+    void markNoShow(Long id);
+
     /**
      * Marca reservas pasadas como completadas (job automático)
      */
     void markPastBookingsAsCompleted();
+
+    /**
+     * Devuelve el id de la sede a la que pertenece la cancha de la reserva (null si la cancha no tiene sede)
+     */
+    Long getVenueIdOfBooking(Long id);
 }

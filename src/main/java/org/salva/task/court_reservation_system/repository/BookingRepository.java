@@ -22,6 +22,15 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      */
     List<Booking> findByUserId(Long userId);
 
+    List<Booking> findByCourtVenueId(Long venueId);
+
+    List<Booking> findByBookingDateBetween(LocalDate startDate, LocalDate endDate);
+
+    /**
+     * Busca reservas de las canchas de una sede en un rango de fechas
+     */
+    List<Booking> findByCourtVenueIdAndBookingDateBetween(Long venueId, LocalDate startDate, LocalDate endDate);
+
     /**
      * Busca reservas por usuario y estado
      */
@@ -38,7 +47,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      */
     @Query("SELECT b FROM Booking b WHERE b.court.id = :courtId " +
             "AND b.bookingDate = :date " +
-            "AND b.status = 'CONFIRMED' " +
+            "AND b.status = 'CONFIRMADA' " +
             "ORDER BY b.startTime ASC")
     List<Booking> findConfirmedBookingsByCourtAndDate(
             @Param("courtId") Long courtId,
@@ -51,7 +60,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      */
     @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.court.id = :courtId " +
             "AND b.bookingDate = :date " +
-            "AND b.status = 'CONFIRMED' " +
+            "AND b.status = 'CONFIRMADA' " +
             "AND (" +
             "  (b.startTime < :endTime AND b.endTime > :startTime)" +
             ")")
@@ -61,6 +70,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("startTime") LocalTime startTime,
             @Param("endTime") LocalTime endTime
     );
+
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.court.id = :courtId " +
+            "AND b.bookingDate = :date AND b.status = 'CONFIRMADA' AND b.id <> :bookingId " +
+            "AND b.startTime < :endTime AND b.endTime > :startTime")
+    boolean existsOverlappingBookingExcludingId(
+            @Param("courtId") Long courtId, @Param("date") LocalDate date,
+            @Param("startTime") LocalTime startTime, @Param("endTime") LocalTime endTime,
+            @Param("bookingId") Long bookingId);
 
     /**
      * Busca reservas recurrentes hijas de una reserva padre
@@ -72,7 +89,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      */
     @Query("SELECT b FROM Booking b WHERE b.user.id = :userId " +
             "AND b.bookingDate >= :today " +
-            "AND b.status = 'CONFIRMED' " +
+            "AND b.status = 'CONFIRMADA' " +
             "ORDER BY b.bookingDate ASC, b.startTime ASC")
     List<Booking> findFutureBookingsByUser(
             @Param("userId") Long userId,
@@ -84,12 +101,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      */
     List<Booking> findByUserPackageId(Long userPackageId);
 
+    boolean existsByCourtIdAndUserIdAndStatus(Long courtId, Long userId, BookingStatus status);
+
     /**
      * Busca reservas pendientes de completar (para marcar como COMPLETED automáticamente)
      */
-    @Query("SELECT b FROM Booking b WHERE b.status = 'CONFIRMED' " +
-            "AND b.bookingDate < :date " +
-            "OR (b.bookingDate = :date AND b.endTime < :time)")
+    @Query("SELECT b FROM Booking b WHERE b.status = 'CONFIRMADA' " +
+            "AND (b.bookingDate < :date " +
+            "OR (b.bookingDate = :date AND b.endTime < :time))")
     List<Booking> findPastConfirmedBookings(
             @Param("date") LocalDate date,
             @Param("time") LocalTime time
@@ -115,7 +134,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("SELECT b.court.id, b.court.name, SUM(b.totalPrice) " +
             "FROM Booking b " +
             "WHERE b.bookingDate BETWEEN :startDate AND :endDate " +
-            "AND b.status IN ('CONFIRMED', 'COMPLETED') " +
+            "AND b.status IN ('CONFIRMADA', 'COMPLETADA') " +
             "GROUP BY b.court.id, b.court.name " +
             "ORDER BY SUM(b.totalPrice) DESC")
     List<Object[]> getTotalRevenueByCourtInPeriod(
@@ -126,7 +145,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     /**
      * Busca reservas a punto de iniciar (para notificaciones)
      */
-    @Query("SELECT b FROM Booking b WHERE b.status = 'CONFIRMED' " +
+    @Query("SELECT b FROM Booking b WHERE b.status = 'CONFIRMADA' " +
             "AND b.bookingDate = :date " +
             "AND b.startTime BETWEEN :startTime AND :endTime")
     List<Booking> findBookingsStartingSoon(

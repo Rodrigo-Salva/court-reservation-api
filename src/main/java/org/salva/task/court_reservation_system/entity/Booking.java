@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.UUID;
 
 /**
  * Entidad que representa una reserva de cancha
@@ -132,9 +133,16 @@ public class Booking {
     @Column(name = "penalty_amount", precision = 10, scale = 2)
     private BigDecimal penaltyAmount;
 
+    @Column(name = "check_in_code", nullable = false, unique = true, updatable = false, length = 36)
+    private String checkInCode;
+
+    @Column(name = "checked_in_at")
+    private LocalDateTime checkedInAt;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        checkInCode = UUID.randomUUID().toString();
         if (status == null) {
             status = BookingStatus.PENDIENTE;
         }
