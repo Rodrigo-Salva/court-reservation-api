@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
@@ -17,7 +18,7 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("${app.security.jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
+    @Value("${app.security.jwt.secret}")
     private String secretKey;
 
     @Value("${app.security.jwt.expiration:86400000}") // 24 hours
@@ -25,6 +26,17 @@ public class JwtService {
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    @PostConstruct
+    void validateSecret() {
+        try {
+            if (Decoders.BASE64.decode(secretKey).length < 32) {
+                throw new IllegalStateException("JWT_SECRET debe tener al menos 32 bytes codificados en Base64");
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("JWT_SECRET debe estar codificado en Base64", ex);
+        }
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

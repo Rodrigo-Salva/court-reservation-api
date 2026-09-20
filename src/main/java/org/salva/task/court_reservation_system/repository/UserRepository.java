@@ -61,11 +61,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /**
      * Query personalizada: Usuarios con membresía activa y sin reservas recientes
      */
-    @Query("SELECT u FROM User u WHERE u.membershipType != 'NONE' " +
+    @Query("SELECT u FROM User u WHERE u.membershipType != 'NINGUNA' " +
             "AND u.active = true " +
             "AND u.id NOT IN (" +
             "  SELECT DISTINCT b.user.id FROM Booking b " +
-            "  WHERE b.createdAt > :sinceDate AND b.status = 'CONFIRMED'" +
+            "  WHERE b.createdAt > :sinceDate AND b.status = 'CONFIRMADA'" +
             ")")
     List<User> findInactiveUsersWithMembership(@Param("sinceDate") LocalDateTime sinceDate);
 

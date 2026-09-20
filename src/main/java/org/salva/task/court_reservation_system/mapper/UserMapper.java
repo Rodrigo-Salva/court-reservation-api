@@ -19,6 +19,8 @@ public interface UserMapper {
      */
     @Mapping(source = "membershipType.discountPercentage", target = "membershipDiscount")
     @Mapping(source = "membershipType.maxDaysAdvance", target = "maxDaysAdvance")
+    @Mapping(source = "venue.id", target = "venueId")
+    @Mapping(source = "venue.name", target = "venueName")
     UserResponseDTO toResponseDTO(User user);
 
     List<UserResponseDTO> toResponseDTOList(List<User> users);
@@ -30,10 +32,12 @@ public interface UserMapper {
     @Mapping(target = "registrationDate", ignore = true)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "active", constant = "true")
+    @Mapping(target = "venue", ignore = true)
     User toEntity(UserRequestDTO requestDTO);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "role", ignore = true)
+    @Mapping(target = "venue", ignore = true)
     void updateEntityFromDTO(UserRequestDTO requestDTO, @MappingTarget User user);
 }

@@ -1,5 +1,7 @@
 package org.salva.task.court_reservation_system.service;
 
+import org.salva.task.court_reservation_system.dto.request.StaffAssignmentRequestDTO;
+import org.salva.task.court_reservation_system.dto.request.StaffUserRequestDTO;
 import org.salva.task.court_reservation_system.dto.request.UserRequestDTO;
 import org.salva.task.court_reservation_system.dto.response.UserResponseDTO;
 import org.salva.task.court_reservation_system.enums.MembershipType;
@@ -15,6 +17,16 @@ public interface UserService {
      * Crea un nuevo usuario
      */
     UserResponseDTO createUser(UserRequestDTO requestDTO);
+
+    /**
+     * Crea personal de una sede (VENUE_ADMIN o RECEPTIONIST) asociado a una sede
+     */
+    UserResponseDTO createStaffUser(StaffUserRequestDTO requestDTO);
+
+    /**
+     * Asigna un usuario existente como personal de una sede
+     */
+    UserResponseDTO assignStaffVenue(Long id, StaffAssignmentRequestDTO requestDTO);
 
     /**
      * Obtiene un usuario por ID

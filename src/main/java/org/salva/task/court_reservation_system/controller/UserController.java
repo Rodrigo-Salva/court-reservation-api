@@ -1,5 +1,7 @@
 package org.salva.task.court_reservation_system.controller;
 
+import org.salva.task.court_reservation_system.dto.request.StaffAssignmentRequestDTO;
+import org.salva.task.court_reservation_system.dto.request.StaffUserRequestDTO;
 import org.salva.task.court_reservation_system.dto.request.UserRequestDTO;
 import org.salva.task.court_reservation_system.dto.response.UserResponseDTO;
 import org.salva.task.court_reservation_system.enums.MembershipType;
@@ -13,6 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.salva.task.court_reservation_system.security.AccessControlService;
+import org.salva.task.court_reservation_system.security.CustomUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 /**
  * Controller para gestión de usuarios
@@ -24,6 +29,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final AccessControlService accessControl;
 
     @PostMapping
     @Operation(summary = "Crear un nuevo usuario")
@@ -32,17 +38,34 @@ public class UserController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @PostMapping("/staff")
+    @Operation(summary = "Crear personal de sede", description = "Crea un VENUE_ADMIN o RECEPTIONIST asociado a una sede (solo administración global)")
+    public ResponseEntity<UserResponseDTO> createStaffUser(@Valid @RequestBody StaffUserRequestDTO requestDTO) {
+        return new ResponseEntity<>(userService.createStaffUser(requestDTO), HttpStatus.CREATED);
+    }
+
+    @PatchMapping("/{id}/venue")
+    @Operation(summary = "Asignar sede a un usuario", description = "Convierte a un usuario existente en personal de una sede (solo administración global)")
+    public ResponseEntity<UserResponseDTO> assignStaffVenue(@PathVariable Long id,
+            @Valid @RequestBody StaffAssignmentRequestDTO requestDTO) {
+        return ResponseEntity.ok(userService.assignStaffVenue(id, requestDTO));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Obtener usuario por ID")
-    public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accessControl.requireOwnerOrAdmin(id, userDetails);
         UserResponseDTO response = userService.getUserById(id);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/email/{email}")
     @Operation(summary = "Obtener usuario por email")
-    public ResponseEntity<UserResponseDTO> getUserByEmail(@PathVariable String email) {
+    public ResponseEntity<UserResponseDTO> getUserByEmail(@PathVariable String email,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         UserResponseDTO response = userService.getUserByEmail(email);
+        accessControl.requireOwnerOrAdmin(response.getId(), userDetails);
         return ResponseEntity.ok(response);
     }
 
@@ -87,8 +110,10 @@ public class UserController {
     @Operation(summary = "Actualizar usuario")
     public ResponseEntity<UserResponseDTO> updateUser(
             @PathVariable Long id,
-            @Valid @RequestBody UserRequestDTO requestDTO
+            @Valid @RequestBody UserRequestDTO requestDTO,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        accessControl.requireOwnerOrAdmin(id, userDetails);
         UserResponseDTO response = userService.updateUser(id, requestDTO);
         return ResponseEntity.ok(response);
     }

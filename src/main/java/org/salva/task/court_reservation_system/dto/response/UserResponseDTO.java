@@ -2,6 +2,7 @@ package org.salva.task.court_reservation_system.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import org.salva.task.court_reservation_system.enums.MembershipType;
+import org.salva.task.court_reservation_system.enums.Role;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -25,6 +26,10 @@ public class UserResponseDTO {
     private LocalDateTime registrationDate;
 
     private Boolean active;
+
+    private Role role;
+    private Long venueId;
+    private String venueName;
 
     // Información adicional calculada
     private Double membershipDiscount;  // En formato decimal (0.20 = 20%)

@@ -1,16 +1,22 @@
 package org.salva.task.court_reservation_system.service.impl;
 
+import org.salva.task.court_reservation_system.dto.request.StaffAssignmentRequestDTO;
+import org.salva.task.court_reservation_system.dto.request.StaffUserRequestDTO;
 import org.salva.task.court_reservation_system.dto.request.UserRequestDTO;
 import org.salva.task.court_reservation_system.dto.response.UserResponseDTO;
 import org.salva.task.court_reservation_system.entity.User;
+import org.salva.task.court_reservation_system.entity.Venue;
 import org.salva.task.court_reservation_system.enums.MembershipType;
+import org.salva.task.court_reservation_system.enums.Role;
 import org.salva.task.court_reservation_system.exception.ResourceNotFoundException;
 import org.salva.task.court_reservation_system.exception.ValidationException;
 import org.salva.task.court_reservation_system.mapper.UserMapper;
 import org.salva.task.court_reservation_system.repository.UserRepository;
+import org.salva.task.court_reservation_system.repository.VenueRepository;
 import org.salva.task.court_reservation_system.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +33,8 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final VenueRepository venueRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public UserResponseDTO createUser(UserRequestDTO requestDTO) {
@@ -51,6 +59,62 @@ public class UserServiceImpl implements UserService {
         log.info("User created successfully with id: {}", user.getId());
 
         return userMapper.toResponseDTO(user);
+    }
+
+    @Override
+    public UserResponseDTO createStaffUser(StaffUserRequestDTO requestDTO) {
+        log.info("Creating staff user with email: {}", requestDTO.getEmail());
+
+        requireVenueStaffRole(requestDTO.getRole());
+        if (userRepository.existsByEmail(requestDTO.getEmail())) {
+            throw new ValidationException("Ya existe un usuario con el email: " + requestDTO.getEmail());
+        }
+        if (userRepository.existsByPhone(requestDTO.getPhone())) {
+            throw new ValidationException("Ya existe un usuario con el teléfono: " + requestDTO.getPhone());
+        }
+        Venue venue = findVenue(requestDTO.getVenueId());
+
+        User user = User.builder()
+                .name(requestDTO.getName())
+                .email(requestDTO.getEmail())
+                .phone(requestDTO.getPhone())
+                .membershipType(MembershipType.NINGUNA)
+                .password(passwordEncoder.encode(requestDTO.getPassword()))
+                .role(requestDTO.getRole())
+                .venue(venue)
+                .active(true)
+                .build();
+        user = userRepository.save(user);
+
+        log.info("Staff user created with id: {} for venue: {}", user.getId(), venue.getId());
+        return userMapper.toResponseDTO(user);
+    }
+
+    @Override
+    public UserResponseDTO assignStaffVenue(Long id, StaffAssignmentRequestDTO requestDTO) {
+        log.info("Assigning user {} to venue {} as {}", id, requestDTO.getVenueId(), requestDTO.getRole());
+
+        requireVenueStaffRole(requestDTO.getRole());
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        if (user.getRole() == Role.ADMIN || user.getRole() == Role.SUPER_ADMIN) {
+            throw new ValidationException("No se puede asignar una sede a un administrador global");
+        }
+
+        user.setRole(requestDTO.getRole());
+        user.setVenue(findVenue(requestDTO.getVenueId()));
+        return userMapper.toResponseDTO(userRepository.save(user));
+    }
+
+    private void requireVenueStaffRole(Role role) {
+        if (role != Role.VENUE_ADMIN && role != Role.RECEPTIONIST) {
+            throw new ValidationException("El rol debe ser VENUE_ADMIN o RECEPTIONIST");
+        }
+    }
+
+    private Venue findVenue(Long venueId) {
+        return venueRepository.findById(venueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sede no encontrada con id: " + venueId));
     }
 
     @Override

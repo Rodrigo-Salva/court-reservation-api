@@ -31,6 +31,10 @@ public class CustomUserDetails implements UserDetails {
         return user.getEmail();
     }
 
+    public Long getVenueId() {
+        return user.getVenue() != null ? user.getVenue().getId() : null;
+    }
+
     public Long getId() {
         return user.getId();
     }

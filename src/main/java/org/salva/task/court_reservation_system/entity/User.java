@@ -53,6 +53,11 @@ public class User {
     @Column(nullable = false)
     private Boolean active;
 
+    // Solo aplica a VENUE_ADMIN y RECEPTIONIST; el resto de roles lo deja en null.
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "venue_id", foreignKey = @ForeignKey(name = "fk_user_venue"))
+    private Venue venue;
+
     /**
      * Se ejecuta antes de persistir (INSERT)
      * Establece la fecha de registro automáticamente
