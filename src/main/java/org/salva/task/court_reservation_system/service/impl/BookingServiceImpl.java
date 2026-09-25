@@ -45,6 +45,13 @@ public class BookingServiceImpl implements BookingService {
     private final AuditService auditService;
     private final NotificationService notificationService;
 
+    /** Si es true, las reservas nuevas quedan PENDIENTE hasta que se pague dentro del plazo. */
+    @org.springframework.beans.factory.annotation.Value("${app.business-rules.booking.require-payment:false}")
+    private boolean requirePayment;
+
+    @org.springframework.beans.factory.annotation.Value("${app.business-rules.booking.payment-window-minutes:15}")
+    private int paymentWindowMinutes;
+
     // Constantes de configuración (idealmente desde application.yml)
     private static final int MIN_ADVANCE_HOURS = 2;
     private static final int MIN_DURATION_HOURS = 1;
@@ -71,7 +78,12 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingMapper.toEntity(requestDTO);
         booking.setUser(user);
         booking.setCourt(court);
-        booking.setStatus(BookingStatus.CONFIRMADA);
+        // Las reservas pagadas con paquete ya están cubiertas y se confirman de inmediato.
+        boolean awaitingPayment = requirePayment && !Boolean.TRUE.equals(requestDTO.getUsesPackage());
+        booking.setStatus(awaitingPayment ? BookingStatus.PENDIENTE : BookingStatus.CONFIRMADA);
+        if (awaitingPayment) {
+            booking.setPaymentDeadline(LocalDateTime.now().plusMinutes(paymentWindowMinutes));
+        }
 
         // 4. Calcular precios
         calculateAndSetPrices(booking, court, user, false);
@@ -84,7 +96,10 @@ public class BookingServiceImpl implements BookingService {
         // 6. Guardar
         booking = bookingRepository.save(booking);
         auditService.record("CREAR", "RESERVA", booking.getId(), "Reserva creada para cancha " + court.getId(), venueIdOf(court));
-        notificationService.notify(user, NotificationType.RESERVA_CREADA, "Reserva confirmada", "Tu reserva en " + court.getName() + " fue confirmada.");
+        notificationService.notify(user, NotificationType.RESERVA_CREADA,
+                awaitingPayment ? "Reserva pendiente de pago" : "Reserva confirmada",
+                awaitingPayment ? "Paga tu reserva en " + court.getName() + " dentro de " + paymentWindowMinutes + " minutos para confirmarla."
+                        : "Tu reserva en " + court.getName() + " fue confirmada.");
 
         log.info("Booking created successfully with id: {}", booking.getId());
 
@@ -324,8 +339,9 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(requestDTO.getBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada"));
 
-        // Validar que esté confirmada
-        if (booking.getStatus() != BookingStatus.CONFIRMADA) {
+        // Validar que esté confirmada (o pendiente de pago, que se cancela sin penalidad)
+        boolean unpaid = booking.getStatus() == BookingStatus.PENDIENTE;
+        if (booking.getStatus() != BookingStatus.CONFIRMADA && !unpaid) {
             throw new BusinessException("Solo se pueden cancelar reservas confirmadas");
         }
 
@@ -334,7 +350,7 @@ public class BookingServiceImpl implements BookingService {
         long hoursInAdvance = ChronoUnit.HOURS.between(LocalDateTime.now(), bookingDateTime);
 
         // Calcular penalización según RN-020 a RN-025
-        BigDecimal penaltyPercentage = calculateCancellationPenalty(booking, hoursInAdvance);
+        BigDecimal penaltyPercentage = unpaid ? BigDecimal.ZERO : calculateCancellationPenalty(booking, hoursInAdvance);
         BigDecimal penaltyAmount = booking.getTotalPrice().multiply(penaltyPercentage);
         BigDecimal refundAmount = booking.getTotalPrice().subtract(penaltyAmount);
 
@@ -655,6 +671,8 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponseDTO rescheduleBooking(Long id, RescheduleBookingRequestDTO requestDTO) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada"));
+        // Serializa con las reservas nuevas de la misma cancha para evitar solapamientos concurrentes.
+        getCourtForBookingOrThrow((long) booking.getCourt().getId());
         if (booking.getStatus() != BookingStatus.CONFIRMADA) {
             throw new BusinessException("Solo se pueden reprogramar reservas confirmadas");
         }
@@ -721,6 +739,39 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada"));
         return venueIdOf(booking.getCourt());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public org.salva.task.court_reservation_system.dto.response.PageResponseDTO<BookingResponseDTO> searchBookings(
+            Long venueId, BookingStatus status, String text, int page, int size) {
+        org.springframework.data.jpa.domain.Specification<Booking> spec = org.springframework.data.jpa.domain.Specification
+                .where(org.salva.task.court_reservation_system.repository.spec.BookingSpecifications.inVenue(venueId))
+                .and(org.salva.task.court_reservation_system.repository.spec.BookingSpecifications.hasStatus(status))
+                .and(org.salva.task.court_reservation_system.repository.spec.BookingSpecifications.matches(text));
+        org.springframework.data.domain.Sort sort = org.springframework.data.domain.Sort.by(
+                org.springframework.data.domain.Sort.Order.desc("bookingDate"), org.springframework.data.domain.Sort.Order.asc("startTime"));
+        return org.salva.task.court_reservation_system.dto.response.PageResponseDTO.of(
+                bookingRepository.findAll(spec, org.salva.task.court_reservation_system.dto.response.PageResponseDTO.pageable(page, size, sort))
+                        .map(bookingMapper::toResponseDTO));
+    }
+
+    @Override
+    public int cancelExpiredUnpaidBookings() {
+        List<Booking> expired = bookingRepository.findByStatusAndPaymentDeadlineBefore(BookingStatus.PENDIENTE, LocalDateTime.now());
+        for (Booking booking : expired) {
+            booking.setStatus(BookingStatus.CANCELADA);
+            booking.setCancelledAt(LocalDateTime.now());
+            booking.setCancellationReason("Pago no realizado dentro del plazo");
+            bookingRepository.save(booking);
+            auditService.record("EXPIRAR", "RESERVA", booking.getId(), "Reserva cancelada por falta de pago", venueIdOf(booking.getCourt()));
+            notificationService.notify(booking.getUser(), NotificationType.CANCELACION, "Reserva cancelada por falta de pago",
+                    "Tu reserva en " + booking.getCourt().getName() + " se canceló porque el pago no se realizó a tiempo.");
+        }
+        if (!expired.isEmpty()) {
+            log.info("Cancelled {} unpaid bookings past their payment deadline", expired.size());
+        }
+        return expired.size();
     }
 
     private Long venueIdOf(Court court) {

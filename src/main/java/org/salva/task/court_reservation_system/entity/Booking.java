@@ -139,6 +139,10 @@ public class Booking {
     @Column(name = "checked_in_at")
     private LocalDateTime checkedInAt;
 
+    // Solo para reservas PENDIENTE (pago requerido): vencido este instante se cancelan automáticamente.
+    @Column(name = "payment_deadline")
+    private LocalDateTime paymentDeadline;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

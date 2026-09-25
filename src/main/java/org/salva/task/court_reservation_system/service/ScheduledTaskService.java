@@ -33,4 +33,6 @@ public interface ScheduledTaskService {
      * Ejecuta cada hora
      */
     void sendUpcomingBookingReminders();
+
+    void cancelExpiredUnpaidBookings();
 }

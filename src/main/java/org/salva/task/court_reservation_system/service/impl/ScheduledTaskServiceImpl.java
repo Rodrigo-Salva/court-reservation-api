@@ -42,6 +42,16 @@ public class ScheduledTaskServiceImpl implements ScheduledTaskService {
     }
 
     @Override
+    @Scheduled(fixedRate = 60000) // Cada minuto
+    public void cancelExpiredUnpaidBookings() {
+        try {
+            bookingService.cancelExpiredUnpaidBookings();
+        } catch (Exception e) {
+            log.error("Error in scheduled task cancelExpiredUnpaidBookings", e);
+        }
+    }
+
+    @Override
     @Scheduled(cron = "0 0 2 * * *") // Todos los días a las 2 AM
     public void markExpiredPackagesAsInactive() {
         log.info("Running scheduled task: markExpiredPackagesAsInactive");

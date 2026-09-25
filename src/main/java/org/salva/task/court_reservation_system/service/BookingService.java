@@ -80,4 +80,15 @@ public interface BookingService {
      * Devuelve el id de la sede a la que pertenece la cancha de la reserva (null si la cancha no tiene sede)
      */
     Long getVenueIdOfBooking(Long id);
+
+    /**
+     * Cancela las reservas pendientes de pago cuyo plazo venció y devuelve cuántas canceló
+     */
+    int cancelExpiredUnpaidBookings();
+
+    /**
+     * Busca reservas paginadas para el personal (venueId null = todas las sedes)
+     */
+    org.salva.task.court_reservation_system.dto.response.PageResponseDTO<BookingResponseDTO> searchBookings(
+            Long venueId, org.salva.task.court_reservation_system.enums.BookingStatus status, String text, int page, int size);
 }

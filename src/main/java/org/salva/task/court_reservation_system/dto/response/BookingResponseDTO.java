@@ -41,5 +41,6 @@ public class BookingResponseDTO {
 
     private Boolean isRecurrent;
     private Boolean usesPackage;
+    private java.time.LocalDateTime paymentDeadline;
 }
 
