@@ -42,7 +42,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Rutas públicas
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
 
                 // Navegación pública de canchas (ver Explorar sin sesión).
                 // Cualquier acción (reservar, comprar paquete, etc.) sigue exigiendo login.
@@ -85,7 +86,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/users", "/api/users/search", "/api/users/membership/**", "/api/users/exists/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PATCH, "/api/users/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/bookings").hasAnyRole("ADMIN", "SUPER_ADMIN", "VENUE_ADMIN", "RECEPTIONIST")
+                .requestMatchers(HttpMethod.GET, "/api/bookings", "/api/bookings/search").hasAnyRole("ADMIN", "SUPER_ADMIN", "VENUE_ADMIN", "RECEPTIONIST")
                 .requestMatchers("/api/audit-logs/**").hasAnyRole("ADMIN", "SUPER_ADMIN", "VENUE_ADMIN")
                 .requestMatchers("/api/reports/**").hasAnyRole("ADMIN", "SUPER_ADMIN", "VENUE_ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/payments").hasAnyRole("ADMIN", "SUPER_ADMIN", "VENUE_ADMIN")
