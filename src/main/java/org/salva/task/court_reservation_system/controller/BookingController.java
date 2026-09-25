@@ -173,6 +173,18 @@ public class BookingController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/check-in/scan")
+    @Operation(summary = "Registrar check-in solo con el código del QR", description = "Usado por el lector de cámara de Recepción: resuelve la reserva a partir del código")
+    public ResponseEntity<BookingDetailResponseDTO> checkInByCode(@Valid @RequestBody CheckInRequestDTO requestDTO,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long bookingId = bookingService.findBookingIdByCheckInCode(requestDTO.getCode());
+        accessControl.requireSameVenueOrAdmin(bookingService.getVenueIdOfBooking(bookingId), userDetails);
+        CheckInRequestDTO trimmed = new CheckInRequestDTO();
+        trimmed.setCode(requestDTO.getCode().trim());
+        bookingService.checkIn(bookingId, trimmed);
+        return ResponseEntity.ok(bookingService.getBookingById(bookingId));
+    }
+
     @PatchMapping("/{id}/no-show")
     @Operation(summary = "Marcar reserva como no-show")
     public ResponseEntity<Void> markNoShow(@PathVariable Long id,

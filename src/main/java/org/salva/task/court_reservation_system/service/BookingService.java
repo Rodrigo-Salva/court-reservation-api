@@ -91,4 +91,9 @@ public interface BookingService {
      */
     org.salva.task.court_reservation_system.dto.response.PageResponseDTO<BookingResponseDTO> searchBookings(
             Long venueId, org.salva.task.court_reservation_system.enums.BookingStatus status, String text, int page, int size);
+
+    /**
+     * Devuelve el id de la reserva asociada a un código de check-in (el que lleva el QR)
+     */
+    Long findBookingIdByCheckInCode(String code);
 }

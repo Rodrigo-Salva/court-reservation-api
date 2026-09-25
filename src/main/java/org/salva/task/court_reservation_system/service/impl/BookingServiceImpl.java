@@ -735,6 +735,14 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
+    public Long findBookingIdByCheckInCode(String code) {
+        return bookingRepository.findByCheckInCode(code == null ? "" : code.trim())
+                .map(Booking::getId)
+                .orElseThrow(() -> new ResourceNotFoundException("No existe una reserva con ese código de check-in"));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Long getVenueIdOfBooking(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada"));

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository para operaciones de base de datos de Booking
@@ -23,6 +24,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, org.spr
     List<Booking> findByUserId(Long userId);
 
     List<Booking> findByCourtVenueId(Long venueId);
+
+    Optional<Booking> findByCheckInCode(String checkInCode);
 
     /** Reservas pendientes de pago cuyo plazo ya venció. */
     List<Booking> findByStatusAndPaymentDeadlineBefore(BookingStatus status, java.time.LocalDateTime deadline);
