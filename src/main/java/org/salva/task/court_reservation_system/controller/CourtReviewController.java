@@ -20,7 +20,10 @@ public class CourtReviewController {
  private final CourtReviewRepository reviewRepository; private final CourtRepository courtRepository; private final BookingRepository bookingRepository;
  private final CourtReviewModerationService moderationService;
  @GetMapping("/court/{courtId}") public List<CourtReviewResponseDTO> list(@PathVariable Long courtId) { return reviewRepository.findByCourtIdAndHiddenFalseOrderByCreatedAtDesc(courtId).stream().map(this::dto).toList(); }
- @GetMapping("/moderation") public List<CourtReviewResponseDTO> moderation(@AuthenticationPrincipal CustomUserDetails user) { return moderationService.list(user); }
+ @GetMapping("/moderation") public org.salva.task.court_reservation_system.dto.response.PageResponseDTO<CourtReviewResponseDTO> moderation(
+   @RequestParam(required = false) String filter, @RequestParam(required = false) String q,
+   @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
+   @AuthenticationPrincipal CustomUserDetails user) { return moderationService.list(user, filter, q, page, size); }
  @PatchMapping("/{id}/hide") public CourtReviewResponseDTO hide(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails user) { return moderationService.setHidden(id, true, user); }
  @PatchMapping("/{id}/show") public CourtReviewResponseDTO show(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails user) { return moderationService.setHidden(id, false, user); }
  @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails user) { moderationService.delete(id, user); }

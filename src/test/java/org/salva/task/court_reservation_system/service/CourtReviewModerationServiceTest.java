@@ -14,6 +14,9 @@ import org.salva.task.court_reservation_system.exception.ResourceNotFoundExcepti
 import org.salva.task.court_reservation_system.repository.CourtReviewRepository;
 import org.salva.task.court_reservation_system.security.AccessControlService;
 import org.salva.task.court_reservation_system.security.CustomUserDetails;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
@@ -43,12 +46,15 @@ class CourtReviewModerationServiceTest {
     }
 
     @Test
-    void globalAdminSeesAllReviewsAndStaffOnlyTheirVenue() {
-        when(reviewRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(review(1L, venueA), review(2L, venueB)));
-        when(reviewRepository.findByCourtVenueIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(review(1L, venueA)));
+    void listReturnsAPageAndRejectsStaffWithoutVenue() {
+        when(reviewRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(review(1L, venueA), review(2L, venueB))));
 
-        assertEquals(2, service.list(user(Role.ADMIN, null)).size());
-        assertEquals(1, service.list(user(Role.VENUE_ADMIN, venueA)).size());
+        var page = service.list(user(Role.ADMIN, null), null, null, 0, 20);
+
+        assertEquals(2, page.content().size());
+        assertEquals(2, page.totalElements());
+        assertThrows(AccessDeniedException.class, () -> service.list(user(Role.VENUE_ADMIN, null), null, null, 0, 20));
     }
 
     @Test
@@ -70,7 +76,7 @@ class CourtReviewModerationServiceTest {
         assertThrows(AccessDeniedException.class, () -> service.setHidden(1L, true, staff));
         assertThrows(AccessDeniedException.class, () -> service.delete(1L, staff));
         verify(reviewRepository, never()).save(any());
-        verify(reviewRepository, never()).delete(any());
+        verify(reviewRepository, never()).delete(any(CourtReview.class));
     }
 
     @Test

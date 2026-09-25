@@ -2,6 +2,10 @@ package org.salva.task.court_reservation_system.service;
 
 import lombok.RequiredArgsConstructor;
 import org.salva.task.court_reservation_system.dto.response.CourtReviewResponseDTO;
+import org.salva.task.court_reservation_system.dto.response.PageResponseDTO;
+import org.salva.task.court_reservation_system.repository.spec.CourtReviewSpecifications;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.salva.task.court_reservation_system.entity.CourtReview;
 import org.salva.task.court_reservation_system.exception.ResourceNotFoundException;
 import org.salva.task.court_reservation_system.repository.CourtReviewRepository;
@@ -22,12 +26,13 @@ public class CourtReviewModerationService {
     private final AccessControlService accessControl;
 
     @Transactional(readOnly = true)
-    public List<CourtReviewResponseDTO> list(CustomUserDetails currentUser) {
+    public PageResponseDTO<CourtReviewResponseDTO> list(CustomUserDetails currentUser, String filter, String text, int page, int size) {
         Long venueId = accessControl.resolveVenueFilter(currentUser);
-        List<CourtReview> reviews = venueId == null
-                ? reviewRepository.findAllByOrderByCreatedAtDesc()
-                : reviewRepository.findByCourtVenueIdOrderByCreatedAtDesc(venueId);
-        return reviews.stream().map(this::toDto).toList();
+        Specification<CourtReview> spec = Specification.where(CourtReviewSpecifications.inVenue(venueId))
+                .and(CourtReviewSpecifications.byVisibility(filter)).and(CourtReviewSpecifications.matches(text));
+        return PageResponseDTO.of(reviewRepository
+                .findAll(spec, PageResponseDTO.pageable(page, size, Sort.by(Sort.Direction.DESC, "createdAt")))
+                .map(this::toDto));
     }
 
     public CourtReviewResponseDTO setHidden(Long id, boolean hidden, CustomUserDetails currentUser) {

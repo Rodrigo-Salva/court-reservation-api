@@ -66,6 +66,17 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/search")
+    @Operation(summary = "Buscar reservas paginadas (personal)", description = "Filtra por estado y texto; el personal de sede solo ve su sede")
+    public ResponseEntity<org.salva.task.court_reservation_system.dto.response.PageResponseDTO<BookingResponseDTO>> searchBookings(
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(bookingService.searchBookings(accessControl.resolveVenueFilter(userDetails), status, q, page, size));
+    }
+
     @GetMapping
     @Operation(summary = "Listar todas las reservas (admin)")
     public ResponseEntity<List<BookingResponseDTO>> getAllBookings(@AuthenticationPrincipal CustomUserDetails userDetails) {
