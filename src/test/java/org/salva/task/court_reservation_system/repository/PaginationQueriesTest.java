@@ -8,6 +8,7 @@ import org.salva.task.court_reservation_system.enums.*;
 import org.salva.task.court_reservation_system.repository.spec.BookingSpecifications;
 import org.salva.task.court_reservation_system.repository.spec.CourtReviewSpecifications;
 import org.salva.task.court_reservation_system.repository.spec.PaymentSpecifications;
+import org.salva.task.court_reservation_system.repository.spec.UserSpecifications;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
@@ -29,6 +30,7 @@ class PaginationQueriesTest {
     @Autowired private CourtReviewRepository reviewRepository;
     @Autowired private BookingRepository bookingRepository;
     @Autowired private AuditLogRepository auditLogRepository;
+    @Autowired private UserRepository userRepository;
 
     private Venue venueA;
     private Venue venueB;
@@ -120,6 +122,29 @@ class PaginationQueriesTest {
 
         Page<AuditLog> venueOne = auditLogRepository.findByVenueIdOrderByCreatedAtDesc(1L, PageResponseDTO.pageable(0, 10, Sort.unsorted()));
         assertEquals(2, venueOne.getTotalElements());
+    }
+
+    @Test
+    void usersAreSearchedByNameEmailPhoneAndActiveFlag() {
+        User inactive = user("Carla Gómez", "carla@test.com", "900000003");
+        inactive.setActive(false);
+        em.persist(inactive);
+        em.flush();
+
+        assertEquals(3, userRepository.count(Specification.where(UserSpecifications.matches(null))));
+        assertEquals(1, userRepository.count(Specification.where(UserSpecifications.matches("pérez"))));
+        assertEquals(1, userRepository.count(Specification.where(UserSpecifications.matches("BETO@test"))));
+        assertEquals(1, userRepository.count(Specification.where(UserSpecifications.matches("900000003"))));
+        assertEquals(2, userRepository.count(Specification.where(UserSpecifications.hasActive(true))));
+        assertEquals(1, userRepository.count(Specification.where(UserSpecifications.hasActive(false)).and(UserSpecifications.matches("carla"))));
+        assertEquals(0, userRepository.count(Specification.where(UserSpecifications.matches("%"))));
+    }
+
+    @Test
+    void checkInCodeLookupFindsTheBooking() {
+        Booking booking = bookingRepository.findAll().get(0);
+        assertEquals(booking.getId(), bookingRepository.findByCheckInCode(booking.getCheckInCode()).orElseThrow().getId());
+        assertEquals(true, bookingRepository.findByCheckInCode("no-existe").isEmpty());
     }
 
     @Test

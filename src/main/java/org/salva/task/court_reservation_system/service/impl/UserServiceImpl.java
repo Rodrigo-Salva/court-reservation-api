@@ -161,6 +161,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    public org.salva.task.court_reservation_system.dto.response.PageResponseDTO<UserResponseDTO> searchUsers(String text, Boolean active, int page, int size) {
+        org.springframework.data.jpa.domain.Specification<User> spec = org.springframework.data.jpa.domain.Specification
+                .where(org.salva.task.court_reservation_system.repository.spec.UserSpecifications.matches(text))
+                .and(org.salva.task.court_reservation_system.repository.spec.UserSpecifications.hasActive(active));
+        return org.salva.task.court_reservation_system.dto.response.PageResponseDTO.of(
+                userRepository.findAll(spec, org.salva.task.court_reservation_system.dto.response.PageResponseDTO.pageable(
+                        page, size, org.springframework.data.domain.Sort.by("name").ascending().and(org.springframework.data.domain.Sort.by("id"))))
+                        .map(userMapper::toResponseDTO));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<UserResponseDTO> searchUsersByName(String name) {
         log.debug("Searching users by name: {}", name);
 

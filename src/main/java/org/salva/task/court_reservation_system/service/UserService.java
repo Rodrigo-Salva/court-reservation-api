@@ -87,4 +87,9 @@ public interface UserService {
      * Verifica si un teléfono ya está registrado
      */
     boolean existsByPhone(String phone);
+
+    /**
+     * Lista usuarios paginados con búsqueda por texto y filtro de estado (solo admin)
+     */
+    org.salva.task.court_reservation_system.dto.response.PageResponseDTO<UserResponseDTO> searchUsers(String text, Boolean active, int page, int size);
 }

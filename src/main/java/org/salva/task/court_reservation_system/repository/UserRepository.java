@@ -16,7 +16,7 @@ import java.util.Optional;
  * Repository para operaciones de base de datos de User
  */
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<User> {
 
     /**
      * Busca usuario por email (único)

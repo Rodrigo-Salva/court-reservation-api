@@ -107,6 +107,22 @@ class UserServiceImplTest {
         verify(userRepository, never()).save(any());
     }
 
+    @Test
+    void searchUsersReturnsAMappedPage() {
+        User user = new User();
+        user.setId(3L);
+        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(user)));
+        org.salva.task.court_reservation_system.dto.response.UserResponseDTO dto = new org.salva.task.court_reservation_system.dto.response.UserResponseDTO();
+        dto.setId(3L);
+        when(userMapper.toResponseDTO(user)).thenReturn(dto);
+
+        var page = service.searchUsers("ana", true, 0, 20);
+
+        assertEquals(1, page.totalElements());
+        assertEquals(3L, page.content().get(0).getId());
+    }
+
     private StaffUserRequestDTO staffRequest(Role role, Long venueId) {
         return StaffUserRequestDTO.builder().name("Staff").email("staff@test.com").phone("999888777")
                 .password("secret1").role(role).venueId(venueId).build();

@@ -83,6 +83,16 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/page")
+    @Operation(summary = "Listar usuarios paginados (admin)", description = "Búsqueda por nombre, email o teléfono y filtro por estado")
+    public ResponseEntity<org.salva.task.court_reservation_system.dto.response.PageResponseDTO<UserResponseDTO>> getUsersPage(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(userService.searchUsers(q, active, page, size));
+    }
+
     @PatchMapping("/{id}/activate")
     @Operation(summary = "Activar usuario", description = "Reactiva un usuario previamente desactivado")
     public ResponseEntity<Void> activateUser(@PathVariable Long id) {
