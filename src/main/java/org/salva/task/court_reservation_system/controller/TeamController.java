@@ -110,6 +110,6 @@ public class TeamController {
 
     private TeamResponseDTO toDto(Team t) {
         return TeamResponseDTO.builder().id(t.getId()).name(t.getName()).description(t.getDescription()).ownerId(t.getOwner().getId())
-                .ownerName(t.getOwner().getName()).memberCount(memberRepository.findByTeamId(t.getId()).size()).build();
+                .ownerName(t.getOwner().getName()).memberCount((int) memberRepository.countByTeamId(t.getId())).build();
     }
 }
