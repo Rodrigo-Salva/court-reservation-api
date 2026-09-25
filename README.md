@@ -1,1526 +1,335 @@
-# Court Reservation System - Documentación que esta Completa
+<div align="center">
 
-## Tabla de Contenidos
+# 🏟️ Court Reservation API
 
-1. [Descripción General](#descripción-general)
-2. [Arquitectura del Sistema](#arquitectura-del-sistema)
-3. [Tecnologías Utilizadas](#tecnologías-utilizadas)
-4. [Reglas de Negocio](#reglas-de-negocio)
-5. [Modelo de Datos](#modelo-de-datos)
-6. [Estructura del Proyecto](#estructura-del-proyecto)
-7. [API Endpoints](#api-endpoints)
-8. [Instalación y Configuración](#instalación-y-configuración)
-9. [Guía de Uso](#guía-de-uso)
-10. [Testing](#testing)
+**Backend del sistema de reservas de canchas deportivas multi-sede**
 
----
+Reservas con precios dinámicos · paquetes prepagados · pagos · comunidad (partidos, equipos, torneos) · reportes · roles por sede
 
-## Descripción General(DATA - APP)
+[![CI](https://github.com/Rodrigo-Salva/court-reservation-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Rodrigo-Salva/court-reservation-api/actions/workflows/ci.yml)
+![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.1-6DB33F?logo=springboot&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-producci%C3%B3n-336791?logo=postgresql&logoColor=white)
 
-**Court Reservation System** es un sistema completo de gestión de reservas para canchas deportivas desarrollado con **Spring Boot 3.2.1** y **Java 21**. El sistema implementa funcionalidades avanzadas como:
+[Inicio rápido](#-inicio-rápido) · [Funcionalidades](#-funcionalidades) · [Arquitectura](#-arquitectura) · [API](docs/API.md) · [Reglas de negocio](docs/BUSINESS_RULES.md) · [Modelo de datos](docs/DATA_MODEL.md) · [Despliegue](docs/DEPLOYMENT.md)
 
--  Sistema de precios dinámicos (horario pico, valle, fin de semana)
--  Gestión de membresías (BASIC, PREMIUM, VIP)
--  Paquetes de horas prepagadas con descuentos
--  Reservas recurrentes (semanales)
--  Sistema de cancelaciones con penalizaciones progresivas
--  Lista de espera con notificaciones automáticas
--  Validaciones exhaustivas de disponibilidad
--  Jobs automáticos para mantenimiento
+</div>
 
 ---
 
-## 🏗️ Arquitectura del Sistema
+## 📑 Tabla de contenidos
 
-### Arquitectura en Capas
-
-```
-┌─────────────────────────────────────────┐
-│         Presentation Layer              │
-│  (Controllers + Exception Handlers)     │
-├─────────────────────────────────────────┤
-│           Service Layer                 │
-│    (Business Logic + Validations)       │
-├─────────────────────────────────────────┤
-│         Persistence Layer               │
-│    (Repositories + Entities)            │
-├─────────────────────────────────────────┤
-│           Database Layer                │
-│       (PostgreSQL / H2)                 │
-└─────────────────────────────────────────┘
-```
-
-### Componentes Principales
-
-| Capa | Responsabilidad | Componentes |
-|------|----------------|-------------|
-| **Controllers** | Exponer API REST | 6 Controllers |
-| **Services** | Lógica de negocio | 8 Services |
-| **Repositories** | Acceso a datos | 6 Repositories |
-| **DTOs** | Transferencia de datos | 19 DTOs |
-| **Entities** | Modelo de dominio | 6 Entities |
-| **Mappers** | Conversión DTO ↔ Entity | 6 Mappers (MapStruct) |
+1. [Funcionalidades](#-funcionalidades)
+2. [Stack tecnológico](#-stack-tecnológico)
+3. [Arquitectura](#-arquitectura)
+4. [Inicio rápido](#-inicio-rápido)
+5. [Configuración](#-configuración)
+6. [Roles y permisos](#-roles-y-permisos)
+7. [Seguridad](#-seguridad)
+8. [API](#-api)
+9. [Datos de demostración](#-datos-de-demostración)
+10. [Tareas programadas](#-tareas-programadas)
+11. [Pruebas](#-pruebas)
+12. [Integración continua](#-integración-continua)
+13. [Estructura del proyecto](#-estructura-del-proyecto)
+14. [Documentación adicional](#-documentación-adicional)
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+## ✨ Funcionalidades
 
-### Backend Core
-- **Java 21** - Lenguaje de programación
-- **Spring Boot 3.2.1** - Framework principal
-- **Spring Data JPA** - ORM y persistencia
-- **Hibernate 6.4.1** - Implementación JPA
-- **Maven 3.11.0** - Gestión de dependencias
-
-### Base de Datos
-- **PostgreSQL** - Base de datos producción
-- **H2 Database** - Base de datos desarrollo/testing
-
-### Validaciones y Mapeo
-- **Jakarta Validation (Bean Validation 3.0)** - Validaciones
-- **MapStruct 1.5.5** - Mapeo objeto a objeto
-- **Lombok 1.18.30** - Reducción de boilerplate
-
-### Documentación
-- **Springdoc OpenAPI 2.6.0** - Documentación API (Swagger)
-
-### Utilidades
-- **Jackson 2.15.3** - Serialización JSON
-- **SLF4J + Logback** - Logging
+| Módulo | Qué incluye |
+|---|---|
+| 📅 **Reservas** | Reserva simple y recurrente (2 a 12 semanas), disponibilidad por cancha, reprogramación, cancelación con penalizaciones, check-in por QR y no-show |
+| 💸 **Precios dinámicos** | Recargos por horario pico y fin de semana, descuento en horario valle, descuento por membresía y por reserva recurrente |
+| 📦 **Paquetes** | Compra de horas prepagadas con vigencia; las horas se descuentan al reservar y se devuelven al cancelar a tiempo |
+| ⏳ **Lista de espera** | Cola FIFO por cancha, fecha y horario; aviso al primero cuando se libera el turno, con 30 min para responder |
+| 💳 **Pagos** | Pago simulado (tarjeta, Yape/Plin, efectivo), panel administrativo, reembolsos y **pago obligatorio opcional** con expiración automática |
+| ⭐ **Reseñas** | Solo tras completar una reserva; moderación (ocultar, mostrar, eliminar) por sede |
+| 🤝 **Comunidad** | Partidos abiertos con solicitudes que acepta o rechaza el creador, equipos con **invitaciones por email**, torneos round-robin con fixture, resultados y ranking |
+| 🏢 **Multi-sede** | Sedes, canchas asignables entre sedes y **roles acotados a su sede** (`VENUE_ADMIN`, `RECEPTIONIST`) |
+| 📊 **Reportes** | Reservas, ingresos, cancelaciones, no-show y horas pico, filtrables por sede, cancha y deporte; exporta **PDF, XLSX y CSV** |
+| 🔔 **Notificaciones** | Bandeja in-app para reservas, pagos, lista de espera, recordatorios e invitaciones |
+| 🧾 **Auditoría** | Registro de acciones sobre reservas, con alcance por sede |
+| 🛡️ **Seguridad** | JWT, revocación al cerrar sesión, límite de intentos de login, autorización por rol y por sede |
 
 ---
 
-## 📐 Reglas de Negocio
+## 🧰 Stack tecnológico
 
-### RN-001 a RN-005: Restricciones de Reserva
-
-| ID | Regla | Implementación |
-|----|-------|----------------|
-| **RN-001** | No permitir solapamiento de horarios en la misma cancha | `BookingRepository.existsOverlappingBooking()` |
-| **RN-002** | Duración mínima 1 hora, máxima 4 horas | `ValidationService.validateDuration()` |
-| **RN-003** | Horario de operación: 06:00 - 23:00 | `ValidationService.validateOperatingHours()` |
-| **RN-004** | Reserva con mínimo 2 horas de anticipación | `ValidationService.validateMinimumAdvance()` |
-| **RN-005** | Límite de anticipación según membresía | `ValidationService.validateMaxDaysAdvance()` |
-
-#### Límites de Anticipación por Membresía
-
-| Membresía | Días Máximos | Descuento |
-|-----------|--------------|-----------|
-| **NONE** | 7 días | 0% |
-| **BASIC** | 15 días | 5% |
-| **PREMIUM** | 30 días | 10% |
-| **VIP** | 60 días | 15% |
+| Capa | Tecnología |
+|---|---|
+| Lenguaje / runtime | Java 21 |
+| Framework | Spring Boot 3.2.1 (Web, Data JPA, Validation, Security, Actuator) |
+| Persistencia | Hibernate 6.4 · H2 (desarrollo) · PostgreSQL (producción) · **Flyway** (migraciones) |
+| Autenticación | Spring Security 6.2 + JWT (`jjwt` 0.12.3, HS256) + BCrypt |
+| Mapeo / boilerplate | MapStruct 1.5.5 · Lombok 1.18.34 |
+| Reportes | Apache POI 5.2.5 (XLSX) · OpenPDF 1.3.39 (PDF) |
+| Documentación | springdoc-openapi 2.6.0 (Swagger UI) |
+| Configuración | `spring-dotenv` (lee `.env` en local) |
+| Pruebas | JUnit 5 · Mockito · `@DataJpaTest` (H2) |
+| CI | GitHub Actions |
 
 ---
 
-### RN-006 a RN-010: Precios Dinámicos
+## 🏗️ Arquitectura
 
-#### Factor de Precio Base: 1.0x
-
-| ID | Condición | Factor | Ejemplo (Base: $100) |
-|----|-----------|--------|----------------------|
-| **RN-006** | Horario Pico (18:00-22:00) | +50% (1.5x) | $150 |
-| **RN-007** | Fin de Semana (Sáb-Dom) | +30% (1.3x) | $130 |
-| **RN-008** | Horario Pico + Fin de Semana | +95% (1.95x) | $195 |
-| **RN-009** | Horario Valle (06:00-12:00) | -20% (0.8x) | $80 |
-| **RN-010** | Horario Normal (12:00-18:00, 22:00-23:00) | Base (1.0x) | $100 |
-
-#### Ejemplo de Cálculo Completo
-
+```mermaid
+flowchart LR
+    Client["🌐 Cliente<br/>(Next.js / Swagger)"] -->|HTTPS + JWT| Filter["🔐 JwtAuthenticationFilter<br/>+ SecurityConfig"]
+    Filter --> Controller["🎛️ Controllers<br/>(REST)"]
+    Controller --> Service["⚙️ Services<br/>(reglas de negocio)"]
+    Controller --> Access["🛂 AccessControlService<br/>(alcance por sede)"]
+    Service --> Access
+    Service --> Repo["🗄️ Repositories<br/>(Spring Data + Specifications)"]
+    Repo --> DB[("PostgreSQL / H2")]
+    Jobs["⏰ Scheduled jobs"] --> Service
+    Service --> Notif["🔔 Notificaciones<br/>+ 🧾 Auditoría"]
+    Flyway["🛫 Flyway"] -.migra.-> DB
 ```
-Base Price:      $100/hora
-Duration:        2 horas
-Time:            19:00 (Horario Pico)
-Day:             Sábado (Fin de Semana)
-Membership:      PREMIUM (10% descuento)
 
-Cálculo:
-1. Base Total:   $100 × 2 = $200
-2. Horario Pico: $200 × 1.5 = $300
-3. Fin de Semana: $300 × 1.3 = $390
-4. Descuento:    $390 × 0.90 = $351
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TOTAL FINAL:     $351.00
-```
+**Capas y responsabilidades**
+
+- **`controller/`** expone la API REST y resuelve el usuario autenticado (`@AuthenticationPrincipal`).
+- **`service/`** concentra las reglas de negocio (`BookingServiceImpl`, `ReportService`, `TeamInvitationService`, …).
+- **`security/`** contiene JWT, `SecurityConfig` (roles por URL) y `AccessControlService`, que decide **qué sede** puede ver o modificar cada usuario.
+- **`repository/`** usa Spring Data JPA; los listados filtrables usan `Specification` en `repository/spec/`.
+- **`entity/` · `dto/` · `mapper/`** separan el modelo persistente de lo que expone la API.
+
+**Autorización en dos niveles.** Primero `SecurityConfig` decide qué *roles* llegan a una URL; después `AccessControlService` restringe *qué datos* ve el personal de sede. Si un `VENUE_ADMIN` o `RECEPTIONIST` no tiene sede asignada, el sistema **falla cerrado** (403).
 
 ---
 
-### RN-011 a RN-014: Descuentos por Membresía
+## 🚀 Inicio rápido
 
-| Membresía | Descuento | Max Días Anticipación | Beneficios Adicionales |
-|-----------|-----------|----------------------|------------------------|
-| **NONE** | 0% | 7 días | - |
-| **BASIC** | 5% | 15 días | Prioridad normal |
-| **PREMIUM** | 10% | 30 días | Cancelación 24h gratis |
-| **VIP** | 15% | 60 días | Cancelación 12h gratis |
+### Requisitos
 
----
+- **JDK 21**. Nada más para desarrollo: usa H2 en memoria (Maven Wrapper incluido: `./mvnw`).
 
-### RN-015 a RN-019: Sistema de Paquetes
+### 1. Clonar y configurar el secreto JWT
 
-#### Paquetes Disponibles
-
-| Paquete | Horas | Precio | Descuento | Precio/Hora | Vigencia |
-|---------|-------|--------|-----------|-------------|----------|
-| **BASIC** | 10h | $900 | 10% | $90/h | 30 días |
-| **PREMIUM** | 20h | $1,600 | 20% | $80/h | 60 días |
-| **VIP** | 40h | $2,800 | 30% | $70/h | 90 días |
-
-#### Reglas de Uso de Paquetes
-
-- **RN-015**: Paquetes se compran con horas prepagadas
-- **RN-016**: Las horas se descuentan al hacer reserva
-- **RN-017**: Paquete vence según vigencia (30/60/90 días)
-- **RN-018**: Horas no usadas se pierden al vencer
-- **RN-019**: Usuario puede tener múltiples paquetes activos
-
----
-
-### RN-020 a RN-025: Cancelaciones y Penalizaciones
-
-#### Tabla de Penalizaciones
-
-| Anticipación | Penalización | Reembolso | VIP |
-|--------------|--------------|-----------|-----|
-| **≥ 24 horas** | 0% | 100% | 0% |
-| **12-24 horas** | 30% | 70% | 0% |
-| **< 12 horas** | 50% | 50% | 30% |
-
-#### Reglas Específicas
-
-- **RN-020**: Más de 24h = Sin penalización
-- **RN-021**: 12-24h = 30% penalización
-- **RN-022**: Menos de 12h = 50% penalización
-- **RN-023**: Cancelaciones afectan historial del usuario
-- **RN-024**: Paquetes: horas se devuelven si cancelación con ≥24h
-- **RN-025**: VIP: cancelación gratis hasta 12h antes
-
----
-
-### RN-026 a RN-030: Reservas Recurrentes
-
-- **RN-026**: Crear múltiples reservas semanales automáticamente
-- **RN-027**: Máximo 12 semanas consecutivas
-- **RN-028**: Si una fecha está ocupada, se omite (no falla todo)
-- **RN-029**: Descuento adicional de 5% en reservas recurrentes
-- **RN-030**: Se pueden cancelar todas juntas o individualmente
-
-#### Ejemplo de Reserva Recurrente
-
-```
-Usuario solicita: Todos los Martes 18:00-20:00 por 8 semanas
-Resultado:
-Semana 1: Reservado
-Semana 2: Reservado
-Semana 3: Ocupado (se omite)
-Semana 4: Reservado
-Semana 5: Reservado
-...
-Total: 7 reservas creadas, 1 omitida
+```bash
+git clone https://github.com/Rodrigo-Salva/court-reservation-api.git
+cd court-reservation-api
+cp .env.example .env
 ```
 
----
+Genera un secreto (Base64, mínimo 32 bytes) y pégalo en `JWT_SECRET` dentro de `.env`:
 
-### RN-031 a RN-034: Lista de Espera
-
-- **RN-031**: Usuario puede unirse a lista de espera si horario ocupado
-- **RN-032**: Al cancelarse una reserva, se notifica al primero en lista (FIFO)
-- **RN-033**: Usuario tiene 30 minutos para confirmar disponibilidad
-- **RN-034**: Si no responde en 30min, se notifica al siguiente
-
----
-
-## 💾 Modelo de Datos
-
-### Diagrama Entidad-Relación
-
+```bash
+# Linux / macOS / Git Bash
+openssl rand -base64 32
 ```
-┌─────────────┐         ┌──────────────┐         ┌─────────────┐
-│    User     │1      ∞│   Booking    │∞      1│    Court    │
-│─────────────│◄────────┤──────────────├────────►│─────────────│
-│ id          │         │ id           │         │ id          │
-│ name        │         │ user_id      │         │ name        │
-│ email       │         │ court_id     │         │ sport_type  │
-│ phone       │         │ booking_date │         │ base_price  │
-│ membership  │         │ start_time   │         │ indoor      │
-│ active      │         │ end_time     │         │ active      │
-└─────────────┘         │ status       │         └─────────────┘
-        │               │ total_price  │
-        │1              │ uses_package │
-        │               └──────────────┘
-        │                      │
-        │               ┌──────▼──────────┐
-        │               │  UserPackage    │
-        └──────────────►│─────────────────│
-                     ∞│ id              │
-                        │ user_id         │
-                        │ package_id      │
-                        │ initial_hours   │
-                        │ remaining_hours │
-                        │ expiration_date │
-                        └─────────────────┘
-                               │1
-                               │
-                        ┌──────▼──────┐
-                        │   Package   │
-                        │─────────────│
-                        │ id          │
-                        │ name        │
-                        │ hours       │
-                        │ total_price │
-                        │ discount_% │
-                        │ validity    │
-                        └─────────────┘
-```
-
-### Entidades Principales
-
-#### 1. Court (Cancha)
-
-```java
-@Entity
-@Table(name = "courts")
-public class Court {
-    @Id @GeneratedValue
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String name;
-
-    @Enumerated(EnumType.STRING)
-    private SportType sportType;  // FOOTBALL, BASKETBALL, TENNIS, etc.
-
-    @Column(nullable = false)
-    private BigDecimal basePricePerHour;
-
-    private Boolean indoor = false;
-    private Boolean active = true;
-
-    @OneToMany(mappedBy = "court")
-    private List<Booking> bookings;
-}
-```
-
-#### 2. User (Usuario)
-
-```java
-@Entity
-@Table(name = "users")
-public class User {
-    @Id @GeneratedValue
-    private Long id;
-
-    @Column(nullable = false)
-    private String name;
-
-    @Column(unique = true, nullable = false)
-    private String email;
-
-    @Column(unique = true, nullable = false)
-    private String phone;
-
-    @Enumerated(EnumType.STRING)
-    private MembershipType membershipType = MembershipType.NONE;
-
-    private Boolean active = true;
-
-    @OneToMany(mappedBy = "user")
-    private List<Booking> bookings;
-}
-```
-
-#### 3. Booking (Reserva)
-
-```java
-@Entity
-@Table(name = "bookings")
-public class Booking {
-    @Id @GeneratedValue
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne
-    @JoinColumn(name = "court_id", nullable = false)
-    private Court court;
-
-    @Column(nullable = false)
-    private LocalDate bookingDate;
-
-    @Column(nullable = false)
-    private LocalTime startTime;
-
-    @Column(nullable = false)
-    private LocalTime endTime;
-
-    @Enumerated(EnumType.STRING)
-    private BookingStatus status;  // CONFIRMED, CANCELLED, COMPLETED
-
-    // Campos de precio
-    private BigDecimal basePrice;
-    private BigDecimal dynamicSurcharges;
-    private BigDecimal appliedDiscount;
-    private BigDecimal totalPrice;
-
-    // Campos para paquetes
-    private Boolean usesPackage = false;
-    private Long userPackageId;
-    private BigDecimal hoursDeducted;
-
-    // Campos para recurrencia
-    private Boolean isRecurrent = false;
-    private Long parentBookingId;
-
-    // Campos de cancelación
-    private LocalDateTime cancelledAt;
-    private String cancellationReason;
-    private BigDecimal penaltyPercentage;
-    private BigDecimal penaltyAmount;
-}
-```
-
-#### 4. Package (Paquete)
-
-```java
-@Entity
-@Table(name = "packages")
-public class Package {
-    @Id @GeneratedValue
-    private Long id;
-
-    @Column(unique = true, nullable = false)
-    private String name;
-
-    private String description;
-
-    @Column(nullable = false)
-    private Integer hoursQuantity;
-
-    @Column(nullable = false)
-    private BigDecimal totalPrice;
-
-    @Column(nullable = false)
-    private Integer discountPercentage;
-
-    @Column(nullable = false)
-    private Integer validityDays;  // 30, 60, 90
-
-    private Boolean active = true;
-}
-```
-
-#### 5. UserPackage (Paquete de Usuario)
-
-```java
-@Entity
-@Table(name = "user_packages")
-public class UserPackage {
-    @Id @GeneratedValue
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne
-    @JoinColumn(name = "package_id", nullable = false)
-    private Package packageDetails;
-
-    private Integer initialHours;
-    private Integer remainingHours;
-
-    @Column(nullable = false)
-    private LocalDateTime purchaseDate;
-
-    @Column(nullable = false)
-    private LocalDateTime expirationDate;
-
-    private Boolean active = true;
-}
-```
-
-#### 6. WaitingList (Lista de Espera)
-
-```java
-@Entity
-@Table(name = "waiting_list")
-public class WaitingList {
-    @Id @GeneratedValue
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne
-    @JoinColumn(name = "court_id", nullable = false)
-    private Court court;
-
-    private LocalDate desiredDate;
-    private LocalTime desiredStartTime;
-    private LocalTime desiredEndTime;
-
-    @Column(nullable = false)
-    private LocalDateTime requestDate;
-
-    private Boolean notified = false;
-    private LocalDateTime notificationDate;
-    private LocalDateTime notificationExpirationDate;
-}
-```
-
----
-
-## 📁 Estructura del Proyecto
-
-```
-court-reservation-system/
-│
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── org/salva/task/court_reservation_system/
-│   │   │       │
-│   │   │       ├── CourtReservationSystemApplication.java
-│   │   │       │
-│   │   │       ├── config/
-│   │   │       │   └── OpenApiConfig.java
-│   │   │       │
-│   │   │       ├── controller/
-│   │   │       │   ├── CourtController.java
-│   │   │       │   ├── UserController.java
-│   │   │       │   ├── BookingController.java ⭐
-│   │   │       │   ├── PackageController.java
-│   │   │       │   ├── UserPackageController.java
-│   │   │       │   └── WaitingListController.java
-│   │   │       │
-│   │   │       ├── dto/
-│   │   │       │   ├── request/
-│   │   │       │   │   ├── CourtRequestDTO.java
-│   │   │       │   │   ├── UserRequestDTO.java
-│   │   │       │   │   ├── BookingRequestDTO.java
-│   │   │       │   │   ├── RecurrentBookingRequestDTO.java
-│   │   │       │   │   ├── CancellationRequestDTO.java
-│   │   │       │   │   ├── PackageRequestDTO.java
-│   │   │       │   │   ├── PackagePurchaseRequestDTO.java
-│   │   │       │   │   └── WaitingListRequestDTO.java
-│   │   │       │   │
-│   │   │       │   └── response/
-│   │   │       │       ├── CourtResponseDTO.java
-│   │   │       │       ├── UserResponseDTO.java
-│   │   │       │       ├── BookingResponseDTO.java
-│   │   │       │       ├── BookingDetailResponseDTO.java
-│   │   │       │       ├── RecurrentBookingResponseDTO.java
-│   │   │       │       ├── CancellationResponseDTO.java
-│   │   │       │       ├── CourtAvailabilityResponseDTO.java
-│   │   │       │       ├── PackageResponseDTO.java
-│   │   │       │       ├── UserPackageResponseDTO.java
-│   │   │       │       ├── WaitingListResponseDTO.java
-│   │   │       │       └── ErrorResponse.java
-│   │   │       │
-│   │   │       ├── entity/
-│   │   │       │   ├── Court.java
-│   │   │       │   ├── User.java
-│   │   │       │   ├── Booking.java
-│   │   │       │   ├── Package.java
-│   │   │       │   ├── UserPackage.java
-│   │   │       │   └── WaitingList.java
-│   │   │       │
-│   │   │       ├── enums/
-│   │   │       │   ├── SportType.java
-│   │   │       │   ├── MembershipType.java
-│   │   │       │   ├── BookingStatus.java
-│   │   │       │   └── RecurrenceFrequency.java
-│   │   │       │
-│   │   │       ├── exception/
-│   │   │       │   ├── GlobalExceptionHandler.java
-│   │   │       │   ├── ResourceNotFoundException.java
-│   │   │       │   ├── ValidationException.java
-│   │   │       │   └── BusinessException.java
-│   │   │       │
-│   │   │       ├── mapper/
-│   │   │       │   ├── CourtMapper.java
-│   │   │       │   ├── UserMapper.java
-│   │   │       │   ├── BookingMapper.java
-│   │   │       │   ├── PackageMapper.java
-│   │   │       │   ├── UserPackageMapper.java
-│   │   │       │   └── WaitingListMapper.java
-│   │   │       │
-│   │   │       ├── repository/
-│   │   │       │   ├── CourtRepository.java
-│   │   │       │   ├── UserRepository.java
-│   │   │       │   ├── BookingRepository.java
-│   │   │       │   ├── PackageRepository.java
-│   │   │       │   ├── UserPackageRepository.java
-│   │   │       │   └── WaitingListRepository.java
-│   │   │       │
-│   │   │       └── service/
-│   │   │           ├── CourtService.java
-│   │   │           ├── UserService.java
-│   │   │           ├── BookingService.java ⭐
-│   │   │           ├── PackageService.java
-│   │   │           ├── UserPackageService.java
-│   │   │           ├── WaitingListService.java
-│   │   │           ├── ValidationService.java
-│   │   │           ├── ScheduledTaskService.java
-│   │   │           └── impl/
-│   │   │               ├── CourtServiceImpl.java
-│   │   │               ├── UserServiceImpl.java
-│   │   │               ├── BookingServiceImpl.java
-│   │   │               ├── PackageServiceImpl.java
-│   │   │               ├── UserPackageServiceImpl.java
-│   │   │               ├── WaitingListServiceImpl.java
-│   │   │               ├── ValidationServiceImpl.java
-│   │   │               └── ScheduledTaskServiceImpl.java
-│   │   │
-│   │   └── resources/
-│   │       ├── application.yml
-│   │       ├── application-dev.yml
-│   │       └── application-prod.yml
-│   │
-│   └── test/
-│       └── java/
-│           └── org/salva/task/court_reservation_system/
-│               ├── service/
-│               ├── controller/
-│               └── repository/
-│
-├── pom.xml
-└── README.md
-```
-
----
-
-## 🔌 API Endpoints
-
-### Base URL
-```
-Development:  http://localhost:8080
-Production:   https://api.yourdomain.com
-```
-
-### Swagger UI
-```
-http://localhost:8080/swagger-ui.html
-```
-
----
-
-### 1. Courts API
-
-#### Crear Cancha
-```http
-POST /api/courts
-Content-Type: application/json
-
-{
-  "name": "Cancha Fútbol 5 - Principal",
-  "sportType": "FOOTBALL",
-  "basePricePerHour": 100.00,
-  "indoor": false,
-  "capacity": 10
-}
-
-Response: 201 Created
-{
-  "id": 1,
-  "name": "Cancha Fútbol 5 - Principal",
-  "sportType": "FOOTBALL",
-  "basePricePerHour": 100.00,
-  "indoor": false,
-  "active": true
-}
-```
-
-#### Listar Canchas Activas
-```http
-GET /api/courts
-
-Response: 200 OK
-[
-  {
-    "id": 1,
-    "name": "Cancha Fútbol 5 - Principal",
-    "sportType": "FOOTBALL",
-    "basePricePerHour": 100.00
-  },
-  {
-    "id": 2,
-    "name": "Cancha Básquet Techada",
-    "sportType": "BASKETBALL",
-    "basePricePerHour": 120.00
-  }
-]
-```
-
-#### Obtener Cancha por ID
-```http
-GET /api/courts/{id}
-
-Response: 200 OK
-{
-  "id": 1,
-  "name": "Cancha Fútbol 5 - Principal",
-  "sportType": "FOOTBALL",
-  "basePricePerHour": 100.00,
-  "indoor": false,
-  "active": true
-}
-```
-
-#### Buscar por Tipo de Deporte
-```http
-GET /api/courts/sport-type/FOOTBALL
-
-Response: 200 OK
-[...]
-```
-
-#### Buscar por Nombre
-```http
-GET /api/courts/search?name=futbol
-
-Response: 200 OK
-[...]
-```
-
-#### Actualizar Cancha
-```http
-PUT /api/courts/{id}
-Content-Type: application/json
-
-{
-  "name": "Cancha Fútbol 5 - Renovada",
-  "basePricePerHour": 110.00
-}
-
-Response: 200 OK
-```
-
-#### Desactivar Cancha
-```http
-DELETE /api/courts/{id}
-
-Response: 204 No Content
-```
-
----
-
-### 2. Users API
-
-#### Crear Usuario
-```http
-POST /api/users
-Content-Type: application/json
-
-{
-  "name": "Juan Pérez",
-  "email": "juan.perez@example.com",
-  "phone": "+51987654321",
-  "membershipType": "PREMIUM"
-}
-
-Response: 201 Created
-{
-  "id": 1,
-  "name": "Juan Pérez",
-  "email": "juan.perez@example.com",
-  "phone": "+51987654321",
-  "membershipType": "PREMIUM",
-  "active": true
-}
-```
-
-#### Obtener Usuario
-```http
-GET /api/users/{id}
-GET /api/users/email/{email}
-
-Response: 200 OK
-```
-
-#### Actualizar Membresía
-```http
-PATCH /api/users/{id}/membership?membershipType=VIP
-
-Response: 200 OK
-{
-  "id": 1,
-  "name": "Juan Pérez",
-  "membershipType": "VIP"
-}
-```
-
----
-
-### 3. Bookings API ⭐
-
-#### Crear Reserva Simple
-```http
-POST /api/bookings
-Content-Type: application/json
-
-{
-  "userId": 1,
-  "courtId": 2,
-  "bookingDate": "2026-01-25",
-  "startTime": "18:00",
-  "endTime": "20:00",
-  "usesPackage": false
-}
-
-Response: 201 Created
-{
-  "id": 1,
-  "userId": 1,
-  "courtId": 2,
-  "bookingDate": "2026-01-25",
-  "startTime": "18:00",
-  "endTime": "20:00",
-  "status": "CONFIRMED",
-  "basePrice": 200.00,
-  "dynamicSurcharges": 100.00,
-  "appliedDiscount": 30.00,
-  "totalPrice": 270.00
-}
-```
-
-#### Crear Reservas Recurrentes
-```http
-POST /api/bookings/recurrent
-Content-Type: application/json
-
-{
-  "userId": 1,
-  "courtId": 2,
-  "startDate": "2026-01-25",
-  "startTime": "18:00",
-  "endTime": "20:00",
-  "frequency": "WEEKLY",
-  "numberOfWeeks": 8,
-  "usesPackage": false
-}
-
-Response: 201 Created
-{
-  "totalRequested": 8,
-  "successfulBookings": 7,
-  "failedBookings": 1,
-  "estimatedTotalPrice": 1890.00,
-  "recurrentDiscountApplied": true,
-  "bookingDetails": [
-    {
-      "bookingId": 1,
-      "bookingDate": "2026-01-25",
-      "status": "CREATED",
-      "price": 270.00
-    },
-    ...
-  ]
-}
-```
-
-#### Obtener Disponibilidad de Cancha
-```http
-GET /api/bookings/court/{courtId}/availability?date=2026-01-25
-
-Response: 200 OK
-{
-  "courtId": 2,
-  "courtName": "Cancha Básquet Techada",
-  "date": "2026-01-25",
-  "availableSlots": [
-    {
-      "startTime": "06:00",
-      "endTime": "07:00",
-      "estimatedPrice": 96.00,
-      "priceFactor": 0.8
-    },
-    {
-      "startTime": "14:00",
-      "endTime": "15:00",
-      "estimatedPrice": 120.00,
-      "priceFactor": 1.0
-    }
-  ],
-  "occupiedSlots": [
-    {
-      "startTime": "18:00",
-      "endTime": "20:00"
-    }
-  ]
-}
-```
-
-#### Verificar Solapamiento
-```http
-GET /api/bookings/check-overlap?courtId=2&date=2026-01-25&startTime=18:00&endTime=20:00
-
-Response: 200 OK
-true  // o false
-```
-
-#### Cancelar Reserva
-```http
-PUT /api/bookings/cancel
-Content-Type: application/json
-
-{
-  "bookingId": 1,
-  "reason": "Cambio de planes",
-  "cancelAllRecurrent": false
-}
-
-Response: 200 OK
-{
-  "bookingId": 1,
-  "status": "CANCELLED",
-  "cancelledAt": "2026-01-20T15:30:00",
-  "hoursInAdvance": 116,
-  "penaltyPercentage": 0.00,
-  "penaltyAmount": 0.00,
-  "refundAmount": 270.00,
-  "message": "Cancelación exitosa sin penalización"
-}
-```
-
-#### Obtener Reservas del Usuario
-```http
-GET /api/bookings/user/{userId}
-GET /api/bookings/user/{userId}/status/CONFIRMED
-GET /api/bookings/user/{userId}/future
-
-Response: 200 OK
-[...]
-```
-
----
-
-### 4. Packages API
-
-#### Crear Paquete
-```http
-POST /api/packages
-Content-Type: application/json
-
-{
-  "name": "Paquete Premium 20 Horas",
-  "description": "20 horas con 20% descuento",
-  "hoursQuantity": 20,
-  "totalPrice": 1600.00,
-  "discountPercentage": 20,
-  "validityDays": 60
-}
-
-Response: 201 Created
-```
-
-#### Listar Paquetes
-```http
-GET /api/packages
-GET /api/packages/best-discount
-GET /api/packages/best-price
-
-Response: 200 OK
-[
-  {
-    "id": 1,
-    "name": "Paquete Basic 10h",
-    "hoursQuantity": 10,
-    "totalPrice": 900.00,
-    "discountPercentage": 10,
-    "pricePerHour": 90.00,
-    "validityDays": 30
-  }
-]
-```
-
----
-
-### 5. User Packages API
-
-#### Comprar Paquete
-```http
-POST /api/user-packages/purchase
-Content-Type: application/json
-
-{
-  "userId": 1,
-  "packageId": 2
-}
-
-Response: 201 Created
-{
-  "id": 1,
-  "userId": 1,
-  "packageName": "Paquete Premium 20h",
-  "initialHours": 20,
-  "remainingHours": 20,
-  "purchaseDate": "2026-01-17T19:00:00",
-  "expirationDate": "2026-03-18T19:00:00",
-  "active": true,
-  "expired": false
-}
-```
-
-#### Obtener Paquetes del Usuario
-```http
-GET /api/user-packages/user/{userId}
-GET /api/user-packages/user/{userId}/active
-GET /api/user-packages/user/{userId}/best-available
-
-Response: 200 OK
-[...]
-```
-
----
-
-### 6. Waiting List API
-
-#### Agregar a Lista de Espera
-```http
-POST /api/waiting-list
-Content-Type: application/json
-
-{
-  "userId": 1,
-  "courtId": 2,
-  "desiredDate": "2026-01-25",
-  "desiredStartTime": "18:00",
-  "desiredEndTime": "20:00"
-}
-
-Response: 201 Created
-{
-  "id": 1,
-  "userId": 1,
-  "courtId": 2,
-  "desiredDate": "2026-01-25",
-  "desiredStartTime": "18:00",
-  "desiredEndTime": "20:00",
-  "requestDate": "2026-01-17T19:00:00",
-  "notified": false,
-  "positionInQueue": 3
-}
-```
-
-#### Obtener Lista de Espera
-```http
-GET /api/waiting-list/user/{userId}
-GET /api/waiting-list/court/{courtId}/pending?date=2026-01-25&startTime=18:00&endTime=20:00
-
-Response: 200 OK
-[...]
-```
-
-#### Eliminar de Lista
-```http
-DELETE /api/waiting-list/{id}
-
-Response: 204 No Content
-```
-
----
-
-## 🚀 Instalación y Configuración
-
-### Variables de entorno obligatorias
-
-El backend no contiene secretos JWT ni credenciales de producción. Copia `.env.example` como referencia y configura las variables en tu terminal o plataforma de despliegue. Spring Boot no carga archivos `.env` automáticamente.
 
 ```powershell
-# Desarrollo local (PowerShell): genera una clave nueva antes de iniciar.
-$bytes = New-Object byte[] 32
-[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
-$env:JWT_SECRET = [Convert]::ToBase64String($bytes)
-mvn spring-boot:run
+# Windows PowerShell
+$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Fill($b); [Convert]::ToBase64String($b)
 ```
 
-Para producción configura `SPRING_PROFILES_ACTIVE=prod`, `JWT_SECRET`, `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` y `CORS_ALLOWED_ORIGINS`. El perfil de producción no carga datos demo ni contraseñas predefinidas.
+> `spring-dotenv` carga `.env` automáticamente al arrancar. El archivo está en `.gitignore`: **nunca lo subas**.
 
-### Migraciones de base de datos (Flyway)
-
-- **Desarrollo** (H2 en memoria): Flyway está desactivado; Hibernate crea el esquema (`create-drop`) y `DemoDataSeeder` carga datos de prueba.
-- **Producción** (PostgreSQL): Flyway aplica `src/main/resources/db/migration` al arrancar y Hibernate solo valida (`ddl-auto: validate`). `V1__baseline_schema.sql` crea el esquema completo en una base vacía.
-- **Cualquier cambio en una entidad exige una migración nueva** (`V2__...sql`, `V3__...sql`; nunca editar una ya aplicada). `FlywayMigrationTest` falla si las migraciones y las entidades no coinciden.
-- Si ya existe una base con tablas creadas antes de usar Flyway: `spring.flyway.baseline-on-migrate=true` y `spring.flyway.baseline-version=1`, y aplicar a mano las diferencias respecto a V1.
-
-### Reservas con pago obligatorio (opcional)
-
-Con `app.business-rules.booking.require-payment=true` las reservas nuevas quedan `PENDIENTE` hasta que se pague dentro de `payment-window-minutes` (15 por defecto). Mientras están pendientes bloquean la cancha; al pagar pasan a `CONFIRMADA` y, si el plazo vence, un job (cada minuto) las cancela y libera el horario. Las reservas pagadas con paquete se confirman de inmediato. Por defecto está desactivado.
-
-### Seguridad y monitoreo
-
-- Login: 5 intentos fallidos por email + IP bloquean nuevos intentos 15 minutos (HTTP 429 con `Retry-After`). El contador vive en memoria; con varias réplicas hay que moverlo a Redis.
-- `POST /api/auth/logout` revoca todos los tokens emitidos al usuario (`token_version`).
-- Actuator: solo `/actuator/health` y `/actuator/info` son públicos. Swagger UI en `/swagger-ui.html` (botón *Authorize* con el JWT).
-- Los listados grandes (`/api/payments`, `/api/court-reviews/moderation`, `/api/audit-logs`, `/api/bookings/search`) reciben `page` (desde 0) y `size` (máx. 100) y devuelven `content`, `page`, `size`, `totalElements` y `totalPages`.
-
-### Integración continua
-
-`.github/workflows/ci.yml` compila y ejecuta todas las pruebas en cada push y pull request a `main`. Al crear una etiqueta `vX.Y.Z` publica el JAR en un GitHub Release. El despliegue a un servidor concreto se añade cuando se defina el destino.
-
-### Requisitos Previos
-
-- **Java 21** (OpenJDK o Oracle JDK)
-- **Maven 3.8+**
-- **PostgreSQL 14+** (para producción)
-- **Git**
-
-### Paso 1: Clonar el Repositorio
+### 2. Ejecutar
 
 ```bash
-git clone https://github.com/yourusername/court-reservation-system.git
-cd court-reservation-system
+./mvnw spring-boot:run          # Windows: mvnw.cmd spring-boot:run
 ```
 
-### Paso 2: Configurar Base de Datos
+La API queda en **http://localhost:8080** con el perfil `dev` (H2 en memoria + datos de demostración).
 
-#### Opción A: H2 (Desarrollo - Sin instalación)
+| Recurso | URL |
+|---|---|
+| 📘 Swagger UI | http://localhost:8080/swagger-ui.html |
+| 🗄️ Consola H2 | http://localhost:8080/h2-console (JDBC `jdbc:h2:mem:courtdb`, usuario `sa`, sin contraseña) |
+| ❤️ Salud | http://localhost:8080/actuator/health |
 
-El proyecto ya está configurado para usar H2 en modo desarrollo. No requiere instalación adicional.
+### 3. Probar
 
-#### Opción B: PostgreSQL (Producción)
+Inicia sesión con una cuenta de [demostración](#-datos-de-demostración) y usa el token en Swagger (*Authorize*):
 
 ```bash
-# Crear base de datos
-createdb court_reservation_db
-
-# Crear usuario
-psql -c "CREATE USER court_user WITH PASSWORD 'your_password';"
-psql -c "GRANT ALL PRIVILEGES ON DATABASE court_reservation_db TO court_user;"
-```
-
-Editar `application-prod.yml`:
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/court_reservation_db
-    username: court_user
-    password: your_password
-```
-
-### Paso 3: Compilar el Proyecto
-
-```bash
-mvn clean install -DskipTests
-```
-
-### Paso 4: Ejecutar la Aplicación
-
-#### Modo Desarrollo (H2)
-```bash
-mvn spring-boot:run
-```
-
-#### Modo Producción (PostgreSQL)
-```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=prod
-```
-
-O generar JAR:
-```bash
-mvn clean package -DskipTests
-java -jar -Dspring.profiles.active=prod target/court-reservation-system-0.0.1-SNAPSHOT.jar
-```
-
-### Paso 5: Verificar la Instalación
-
-```bash
-# Health check
-curl http://localhost:8080/actuator/health
-
-# Swagger UI
-open http://localhost:8080/swagger-ui.html
-
-# H2 Console (solo desarrollo)
-open http://localhost:8080/h2-console
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@sportsbooking.com","password":"admin123"}'
 ```
 
 ---
 
-## 📖 Guía de Uso
+## ⚙️ Configuración
 
-### Caso de Uso 1: Crear Usuario y Reservar Cancha
+### Variables de entorno
 
-```bash
-# 1. Crear usuario
-curl -X POST http://localhost:8080/api/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "María García",
-    "email": "maria@example.com",
-    "phone": "+51999888777",
-    "membershipType": "PREMIUM"
-  }'
+| Variable | Obligatoria | Descripción |
+|---|:---:|---|
+| `JWT_SECRET` | ✅ siempre | Secreto Base64 de ≥ 32 bytes para firmar los JWT |
+| `SPRING_PROFILES_ACTIVE` | prod | `prod` para producción (por defecto `dev`) |
+| `DB_URL` | prod | p. ej. `jdbc:postgresql://localhost:5432/courtdb` |
+| `DB_USERNAME` · `DB_PASSWORD` | prod | Credenciales de PostgreSQL |
+| `CORS_ALLOWED_ORIGINS` | prod | Orígenes permitidos, separados por coma |
 
-# Respuesta: {"id": 1, ...}
+### Perfiles
 
-# 2. Ver canchas disponibles
-curl http://localhost:8080/api/courts
+| | `dev` (por defecto) | `prod` |
+|---|---|---|
+| Base de datos | H2 en memoria | PostgreSQL |
+| Esquema | Hibernate `create-drop` | **Flyway** (`db/migration`) + Hibernate `validate` |
+| Datos de prueba | ✅ `DataLoader` + `DemoDataSeeder` | ❌ ninguno |
+| SQL en logs / consola H2 | ✅ | ❌ |
 
-# 3. Ver disponibilidad de cancha específica
-curl "http://localhost:8080/api/bookings/court/1/availability?date=2026-01-25"
+### Reglas de negocio configurables (`application.yml`)
 
-# 4. Crear reserva
-curl -X POST http://localhost:8080/api/bookings \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": 1,
-    "courtId": 1,
-    "bookingDate": "2026-01-25",
-    "startTime": "18:00",
-    "endTime": "20:00",
-    "usesPackage": false
-  }'
-```
+| Propiedad | Por defecto | Efecto |
+|---|---|---|
+| `app.business-rules.booking.require-payment` | `false` | Si es `true`, las reservas nuevas quedan **PENDIENTE** hasta que se pagan |
+| `app.business-rules.booking.payment-window-minutes` | `15` | Plazo para pagar; vencido, la reserva se cancela sola y libera el horario |
+| `app.security.jwt.expiration` | `86400000` | Vida del token en ms (24 h) |
 
-### Caso de Uso 2: Comprar Paquete y Usar Horas
-
-```bash
-# 1. Ver paquetes disponibles
-curl http://localhost:8080/api/packages
-
-# 2. Comprar paquete
-curl -X POST http://localhost:8080/api/user-packages/purchase \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": 1,
-    "packageId": 2
-  }'
-
-# Respuesta: {"id": 5, "remainingHours": 20, ...}
-
-# 3. Reservar usando paquete
-curl -X POST http://localhost:8080/api/bookings \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": 1,
-    "courtId": 1,
-    "bookingDate": "2026-01-26",
-    "startTime": "10:00",
-    "endTime": "12:00",
-    "usesPackage": true,
-    "userPackageId": 5
-  }'
-
-# 4. Verificar horas restantes
-curl http://localhost:8080/api/user-packages/user/1/active
-# Respuesta: {"remainingHours": 18, ...}
-```
-
-### Caso de Uso 3: Reservas Recurrentes
-
-```bash
-# Crear reserva todos los Lunes 19:00-21:00 por 6 semanas
-curl -X POST http://localhost:8080/api/bookings/recurrent \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": 1,
-    "courtId": 2,
-    "startDate": "2026-01-27",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "frequency": "WEEKLY",
-    "numberOfWeeks": 6,
-    "usesPackage": false
-  }'
-```
-
-### Caso de Uso 4: Cancelación con Penalización
-
-```bash
-# Cancelar con más de 24h de anticipación (sin penalización)
-curl -X PUT http://localhost:8080/api/bookings/cancel \
-  -H "Content-Type: application/json" \
-  -d '{
-    "bookingId": 10,
-    "reason": "Mal clima"
-  }'
-
-# Respuesta:
-# {
-#   "penaltyPercentage": 0.00,
-#   "refundAmount": 270.00,
-#   "message": "Cancelación exitosa sin penalización"
-# }
-```
-
-### Caso de Uso 5: Lista de Espera
-
-```bash
-# 1. Intentar reservar horario ocupado
-curl -X POST http://localhost:8080/api/bookings \
-  ...
-# Error: "Ya existe una reserva en ese horario"
-
-# 2. Unirse a lista de espera
-curl -X POST http://localhost:8080/api/waiting-list \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": 1,
-    "courtId": 1,
-    "desiredDate": "2026-01-25",
-    "desiredStartTime": "18:00",
-    "desiredEndTime": "20:00"
-  }'
-
-# Respuesta: {"positionInQueue": 2, ...}
-
-# 3. Cuando otro usuario cancela, recibes notificación automática
-# (Implementación de email/SMS pending)
-```
+> Los detalles de precios, membresías y cancelaciones están en [docs/BUSINESS_RULES.md](docs/BUSINESS_RULES.md).
 
 ---
 
-## 🧪 Testing
+## 👥 Roles y permisos
 
-### Ejecutar Tests
+| Rol | Alcance |
+|---|---|
+| `USER` | Reserva, paga, compra paquetes, entra a lista de espera, reseña, participa en partidos, equipos y torneos |
+| `RECEPTIONIST` | **Su sede**: consulta reservas, hace check-in (manual o por QR), marca no-show, ve bloqueos |
+| `VENUE_ADMIN` | **Su sede**: canchas, bloqueos, pagos y reembolsos, reseñas, reportes, auditoría, torneos y check-in |
+| `ADMIN` | Todo el sistema, incluida la gestión de usuarios y paquetes |
+| `SUPER_ADMIN` | Sedes y personal de sede, más las funciones de `VENUE_ADMIN` sobre todas las sedes |
 
-```bash
-# Todos los tests
-mvn test
+Un `VENUE_ADMIN` o `RECEPTIONIST` **debe tener una sede asignada**. Un `ADMIN` o `SUPER_ADMIN` crea al personal con `POST /api/users/staff` o asigna sede a un usuario existente con `PATCH /api/users/{id}/venue`.
 
-# Solo tests unitarios
-mvn test -Dtest=*ServiceTest
-
-# Solo tests de integración
-mvn test -Dtest=*ControllerTest
-
-# Con cobertura
-mvn clean test jacoco:report
-```
-
-### Estructura de Tests
-
-```
-src/test/java/
-├── service/
-│   ├── BookingServiceTest.java
-│   ├── UserServiceTest.java
-│   └── ValidationServiceTest.java
-├── controller/
-│   ├── BookingControllerTest.java
-│   └── UserControllerTest.java
-└── repository/
-    └── BookingRepositoryTest.java
-```
+La matriz completa por endpoint está en [docs/API.md](docs/API.md#-matriz-de-acceso).
 
 ---
 
-## 📊 Monitoreo y Logs
+## 🔐 Seguridad
 
-### Niveles de Log
-
-```yaml
-logging:
-  level:
-    root: INFO
-    org.salva.task: DEBUG
-    org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG
-```
-
-### Logs Importantes
-
-```
-# Inicio de aplicación
-2026-01-17 19:00:00.123 INFO  [...] Started CourtReservationSystemApplication in 3.456 seconds
-
-# Creación de reserva
-2026-01-17 19:05:30.456 INFO  [...] Creating booking for user: 1 on court: 2
-2026-01-17 19:05:30.789 INFO  [...] Booking created successfully with id: 10
-
-# Validación fallida
-2026-01-17 19:06:00.123 ERROR [...] Validation error: Debe reservar con al menos 2 horas de anticipación
-
-# Job programado
-2026-01-17 20:00:00.000 INFO  [...] Running scheduled task: markPastBookingsAsCompleted
-2026-01-17 20:00:00.234 INFO  [...] Marked 5 bookings as completed
-```
+- **Contraseñas** con BCrypt; el JWT (HS256) dura 24 h y **se valida contra el usuario en cada petición**.
+- **Logout real**: `POST /api/auth/logout` incrementa la `token_version` del usuario e invalida todos sus tokens.
+- **Anti fuerza bruta**: 5 intentos fallidos por email + IP bloquean el login 15 minutos (HTTP `429` con `Retry-After`). El contador vive en memoria; con varias réplicas conviene moverlo a Redis.
+- **Alcance por sede** en canchas, bloqueos, pagos, reportes, reseñas, auditoría, torneos y check-in.
+- **Secretos fuera del código**: nada sensible se versiona; en producción se inyectan por variables de entorno.
+- **Errores coherentes**: `400` (JSON o parámetros inválidos), `403`, `404`, `429`; una entrada inválida del cliente no produce `500`.
+- **Actuator**: solo `health` e `info` son públicos.
 
 ---
 
-## 🔧 Configuración Avanzada
+## 🔌 API
 
-### Variables de Entorno
+- **Documentación interactiva:** `/swagger-ui.html` (con botón *Authorize* para el JWT).
+- **Referencia por módulo y rol:** [docs/API.md](docs/API.md).
+- **Listados paginados:** `GET /api/payments`, `/api/court-reviews/moderation`, `/api/audit-logs`, `/api/bookings/search` y `/api/users/page` aceptan `page` (desde 0) y `size` (máx. 100) y responden:
 
-```bash
-# application-prod.yml
-export DB_URL=jdbc:postgresql://db.example.com:5432/court_db
-export DB_USERNAME=prod_user
-export DB_PASSWORD=secure_password
-export SERVER_PORT=8080
-```
-
-### Configuración de CORS
-
-```java
-@Configuration
-public class CorsConfig {
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/api/**")
-                    .allowedOrigins("http://localhost:3000", "https://yourdomain.com")
-                    .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH")
-                    .allowCredentials(true);
-            }
-        };
-    }
+```json
+{
+  "content": [],
+  "page": 0,
+  "size": 20,
+  "totalElements": 42,
+  "totalPages": 3
 }
 ```
 
 ---
 
-## 📈 Performance y Optimización
+## 🌱 Datos de demostración
 
-### Índices de Base de Datos
+En el perfil `dev` cada tabla arranca con **al menos 10 registros** coherentes entre sí (reservas en todos los estados, pagos aprobados, rechazados y reembolsados, un torneo en curso con ranking, invitaciones de equipo, etc.). Se reconstruyen en cada reinicio.
 
-```sql
--- Índices recomendados
-CREATE INDEX idx_booking_date ON bookings(booking_date);
-CREATE INDEX idx_booking_court_date ON bookings(court_id, booking_date);
-CREATE INDEX idx_booking_user ON bookings(user_id);
-CREATE INDEX idx_user_email ON users(email);
-CREATE INDEX idx_waiting_list_court_date ON waiting_list(court_id, desired_date);
-```
+| Cuenta | Contraseña | Rol |
+|---|---|---|
+| `admin@sportsbooking.com` | `admin123` | `ADMIN` |
+| `venueadmin@sportsbooking.com` | `venue123` | `VENUE_ADMIN` · Sede Central |
+| `recepcion@sportsbooking.com` | `recep123` | `RECEPTIONIST` · Sede Central |
+| `norteadmin@sportsbooking.com` | `norte123` | `VENUE_ADMIN` · Sede Norte |
+| `demo01@…` a `demo12@sportsbooking.com` | `demo123` | `USER` (membresías: ninguna, básica, premium y VIP en rotación) |
 
-### Caché (Opcional)
-
-```java
-@Configuration
-@EnableCaching
-public class CacheConfig {
-    @Bean
-    public CacheManager cacheManager() {
-        return new ConcurrentMapCacheManager("courts", "packages");
-    }
-}
-```
+> ⚠️ Son credenciales de desarrollo. No existen en producción.
 
 ---
 
-## 🚨 Troubleshooting
+## ⏰ Tareas programadas
 
-### Problema: No se compila el proyecto
+| Frecuencia | Tarea |
+|---|---|
+| Cada minuto | Cancela las reservas **pendientes de pago** cuyo plazo venció |
+| Cada 5 min | Vence avisos de lista de espera y notifica al siguiente |
+| Cada hora | Marca como completadas las reservas ya finalizadas · envía recordatorios de reservas próximas |
+| Diaria 02:00 | Desactiva los paquetes vencidos |
+| Diaria 03:00 | Limpia solicitudes antiguas de la lista de espera |
+
+---
+
+## 🧪 Pruebas
 
 ```bash
-# Solución 1: Limpiar e instalar de nuevo
-mvn clean install -U
-
-# Solución 2: Eliminar cache de Maven
-rm -rf ~/.m2/repository
-mvn clean install
+./mvnw test        # 80 pruebas
 ```
 
-### Problema: Error de Swagger
+| Tipo | Qué cubre |
+|---|---|
+| Unitarias (Mockito) | Reservas y pago pendiente, usuarios, canchas, reseñas, invitaciones de equipo, reportes y exportación |
+| Seguridad | Alcance por sede, JWT y revocación, límite de intentos de login |
+| Repositorios (`@DataJpaTest`) | Filtros, búsquedas y paginación contra una base real |
+| **Migraciones** | `FlywayMigrationTest` aplica Flyway y hace que Hibernate **valide el esquema contra las entidades**: falla si cambias una entidad sin agregar su migración |
+| Contexto | Arranque completo de la aplicación |
 
-```
-Error: NoSuchMethodError: ControllerAdviceBean.<init>
-```
+---
 
-**Solución**: Actualizar springdoc a versión 2.6.0 compatible con Spring Boot 3.2.x
+## 🔄 Integración continua
 
-```xml
-<dependency>
-    <groupId>org.springdoc</groupId>
-    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-    <version>2.6.0</version>
-</dependency>
-```
+`.github/workflows/ci.yml`:
 
-### Problema: H2 Console no funciona
+- En cada **push** y **pull request** a `main`: compila y ejecuta todas las pruebas (JDK 21).
+- Al crear una etiqueta **`vX.Y.Z`**: publica el **JAR** en un GitHub Release.
 
-**Solución**: Verificar `application-dev.yml`
-
-```yaml
-spring:
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+```bash
+git tag v1.0.0 && git push origin v1.0.0
 ```
 
 ---
 
-## 📝 Próximas Mejoras
+## 📁 Estructura del proyecto
 
-- [ ] Implementar Spring Security con JWT
-- [ ] Sistema de notificaciones por email/SMS
-- [ ] Dashboard de administración
-- [ ] Reportes y estadísticas
-- [ ] Pasarela de pagos (Stripe/PayPal)
-- [ ] Sistema de valoraciones y reviews
-- [ ] App móvil (React Native)
-- [ ] Calendario integrado (Google Calendar)
-- [ ] Sistema de promociones y cupones
-- [ ] Chat en tiempo real para soporte
+```text
+src/main/java/org/salva/task/court_reservation_system/
+├── config/          OpenAPI, DataLoader y DemoDataSeeder (solo dev)
+├── controller/      API REST (una clase por módulo)
+├── dto/             request/ y response/ (incluye PageResponseDTO)
+├── entity/          Entidades JPA
+├── enums/           Estados, roles, deportes y membresías
+├── exception/       Excepciones de negocio y GlobalExceptionHandler
+├── mapper/          MapStruct
+├── repository/      Spring Data JPA  ·  spec/ → Specifications de filtros
+├── security/        JWT, SecurityConfig, AccessControlService, LoginAttemptService
+└── service/         Interfaces y impl/ con la lógica de negocio
 
----
+src/main/resources/
+├── application.yml          Perfiles dev y prod
+└── db/migration/            Migraciones Flyway (V1__baseline_schema.sql, …)
 
-## 👥 Contribución
-
-### Cómo Contribuir
-
-1. Fork el proyecto
-2. Crea tu Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push al Branch (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-### Estándares de Código
-
-- Usar Java 21 features
-- Seguir convenciones de Spring Boot
-- Escribir tests para nuevas funcionalidades
-- Documentar métodos públicos con Javadoc
-- Mantener cobertura de tests > 80%
+docs/                        Documentación detallada
+.github/workflows/ci.yml     Pipeline de CI y publicación de releases
+```
 
 ---
 
-## 📄 Licencia
+## 📚 Documentación adicional
 
-Este proyecto está bajo la Licencia MIT. Ver archivo `LICENSE` para más detalles.
+| Documento | Contenido |
+|---|---|
+| [docs/API.md](docs/API.md) | Todos los endpoints por módulo y la matriz de acceso por rol |
+| [docs/BUSINESS_RULES.md](docs/BUSINESS_RULES.md) | Precios, membresías, paquetes, cancelaciones, recurrentes, pagos y lista de espera |
+| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Diagrama entidad-relación y ciclo de vida de una reserva |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Puesta en producción: PostgreSQL, Flyway, JAR, servicio y proxy inverso |
 
----
-
-## 📧 Contacto
-
-**Desarrollador**: Rodrigo Salva  
-**Email**: rodrigodanielsalvasaccatoma@gmail.com 
-**GitHub**: [@Rodrigo-Salva](https://github.com/Rodrigo-Salva/court-reservation-api)
-
----
-
-## 🙏 Agradecimientos
-
-- Spring Team por el excelente framework
-- MapStruct team por la librería de mapeo
-- Springdoc team por la integración con OpenAPI
-- Comunidad de Stack Overflow
+**Frontend:** [court-reservation-front](https://github.com/Rodrigo-Salva/court-reservation-front) (Next.js).
 
 ---
 
-**Versión**: 1.0.0  
-**Última actualización**: Enero 17, 2026  
-**Estado**: ✅ Producción Ready
+<div align="center">
 
----
+Hecho con ☕ y Spring Boot por [Rodrigo Salva](https://github.com/Rodrigo-Salva)
 
-## 📚 Referencias
-
-- [Spring Boot Documentation](https://spring.io/projects/spring-boot)
-- [Spring Data JPA](https://spring.io/projects/spring-data-jpa)
-- [MapStruct Documentation](https://mapstruct.org/)
-- [Springdoc OpenAPI](https://springdoc.org/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-
----
-
-**¡Gracias por usar Court Reservation System! 🎉, Alguna consulta? me podria escribir a mi correo**
+</div>
