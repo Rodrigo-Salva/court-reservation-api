@@ -53,6 +53,11 @@ public class User {
     @Column(nullable = false)
     private Boolean active;
 
+    // Se incrementa al cerrar sesión: invalida todos los JWT emitidos antes.
+    @Builder.Default
+    @Column(name = "token_version", nullable = false)
+    private Integer tokenVersion = 0;
+
     // Solo aplica a VENUE_ADMIN y RECEPTIONIST; el resto de roles lo deja en null.
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "venue_id", foreignKey = @ForeignKey(name = "fk_user_venue"))

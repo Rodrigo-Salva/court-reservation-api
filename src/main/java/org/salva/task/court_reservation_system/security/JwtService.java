@@ -18,6 +18,8 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
+    private static final String TOKEN_VERSION_CLAIM = "ver";
+
     @Value("${app.security.jwt.secret}")
     private String secretKey;
 
@@ -45,7 +47,11 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        Map<String, Object> claims = new HashMap<>();
+        if (userDetails instanceof CustomUserDetails details) {
+            claims.put(TOKEN_VERSION_CLAIM, versionOf(details));
+        }
+        return generateToken(claims, userDetails);
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
@@ -64,7 +70,20 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        return username.equals(userDetails.getUsername()) && !isTokenExpired(token) && tokenVersionMatches(token, userDetails);
+    }
+
+    private boolean tokenVersionMatches(String token, UserDetails userDetails) {
+        if (!(userDetails instanceof CustomUserDetails details)) {
+            return true;
+        }
+        Integer claimed = extractClaim(token, claims -> claims.get(TOKEN_VERSION_CLAIM, Integer.class));
+        return (claimed == null ? 0 : claimed) == versionOf(details);
+    }
+
+    private int versionOf(CustomUserDetails details) {
+        Integer version = details.getUser().getTokenVersion();
+        return version == null ? 0 : version;
     }
 
     private boolean isTokenExpired(String token) {
