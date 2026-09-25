@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Compilar y probar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # Ejecuta compilación + todas las pruebas (unitarias, repositorios sobre H2 y validación de migraciones Flyway).
+      - name: mvn verify
+        run: mvn -B -ntp verify
+
+      - name: Publicar reportes de pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports
+          if-no-files-found: ignore
+          retention-days: 7
+
+  release:
+    name: Publicar JAR en un Release
+    # Entrega continua: al crear una etiqueta vX.Y.Z se genera el JAR y se adjunta a un GitHub Release.
+    # El despliegue a un servidor concreto se agrega aquí cuando se defina el destino.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Empaquetar
+        run: mvn -B -ntp -DskipTests package
+
+      - name: Crear Release con el JAR
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/court-reservation-system-*.jar
+          generate_release_notes: true

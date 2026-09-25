@@ -1040,6 +1040,28 @@ mvn spring-boot:run
 
 Para producción configura `SPRING_PROFILES_ACTIVE=prod`, `JWT_SECRET`, `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` y `CORS_ALLOWED_ORIGINS`. El perfil de producción no carga datos demo ni contraseñas predefinidas.
 
+### Migraciones de base de datos (Flyway)
+
+- **Desarrollo** (H2 en memoria): Flyway está desactivado; Hibernate crea el esquema (`create-drop`) y `DemoDataSeeder` carga datos de prueba.
+- **Producción** (PostgreSQL): Flyway aplica `src/main/resources/db/migration` al arrancar y Hibernate solo valida (`ddl-auto: validate`). `V1__baseline_schema.sql` crea el esquema completo en una base vacía.
+- **Cualquier cambio en una entidad exige una migración nueva** (`V2__...sql`, `V3__...sql`; nunca editar una ya aplicada). `FlywayMigrationTest` falla si las migraciones y las entidades no coinciden.
+- Si ya existe una base con tablas creadas antes de usar Flyway: `spring.flyway.baseline-on-migrate=true` y `spring.flyway.baseline-version=1`, y aplicar a mano las diferencias respecto a V1.
+
+### Reservas con pago obligatorio (opcional)
+
+Con `app.business-rules.booking.require-payment=true` las reservas nuevas quedan `PENDIENTE` hasta que se pague dentro de `payment-window-minutes` (15 por defecto). Mientras están pendientes bloquean la cancha; al pagar pasan a `CONFIRMADA` y, si el plazo vence, un job (cada minuto) las cancela y libera el horario. Las reservas pagadas con paquete se confirman de inmediato. Por defecto está desactivado.
+
+### Seguridad y monitoreo
+
+- Login: 5 intentos fallidos por email + IP bloquean nuevos intentos 15 minutos (HTTP 429 con `Retry-After`). El contador vive en memoria; con varias réplicas hay que moverlo a Redis.
+- `POST /api/auth/logout` revoca todos los tokens emitidos al usuario (`token_version`).
+- Actuator: solo `/actuator/health` y `/actuator/info` son públicos. Swagger UI en `/swagger-ui.html` (botón *Authorize* con el JWT).
+- Los listados grandes (`/api/payments`, `/api/court-reviews/moderation`, `/api/audit-logs`, `/api/bookings/search`) reciben `page` (desde 0) y `size` (máx. 100) y devuelven `content`, `page`, `size`, `totalElements` y `totalPages`.
+
+### Integración continua
+
+`.github/workflows/ci.yml` compila y ejecuta todas las pruebas en cada push y pull request a `main`. Al crear una etiqueta `vX.Y.Z` publica el JAR en un GitHub Release. El despliegue a un servidor concreto se añade cuando se defina el destino.
+
 ### Requisitos Previos
 
 - **Java 21** (OpenJDK o Oracle JDK)
