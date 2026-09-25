@@ -75,7 +75,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         seedNotifications(users);
         seedOpenMatches(users, bookings);
         seedTeams(users);
-        seedTournaments(users);
+        seedTournaments(users, venues);
         seedAuditLogs(users, bookings, courts);
         System.out.println("✅ Datos de demostración cargados (usuarios demo01..demo12@sportsbooking.com / " + DEMO_PASSWORD + ")");
     }
@@ -293,7 +293,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         }
     }
 
-    private void seedTournaments(List<User> users) {
+    private void seedTournaments(List<User> users, List<Venue> venues) {
         String[] names = {"Copa Pádel Apertura", "Liga Tenis Clausura", "Torneo Vóley Verano", "Copa Fútbol 7", "Open Squash", "Campeonato Básquet 3x3",
                 "Torneo Bádminton Dobles", "Copa Frontenis", "Interclubes Pádel", "Torneo Relámpago Tenis"};
         SportType[] sports = {SportType.PADEL, SportType.TENIS, SportType.VOLEY, SportType.FULBOL, SportType.SQUASH, SportType.BASQUET,
@@ -302,7 +302,8 @@ public class DemoDataSeeder implements CommandLineRunner {
         for (int i = 0; i < names.length; i++) {
             TournamentStatus status = i == 0 ? TournamentStatus.EN_CURSO : i == 1 ? TournamentStatus.FINALIZADO : TournamentStatus.INSCRIPCION;
             tournaments.add(tournamentRepository.save(Tournament.builder().name(names[i]).sportType(sports[i])
-                    .startDate(i == 1 ? today.minusDays(20) : today.plusDays(3 + i * 4)).maxParticipants(i % 2 == 0 ? 8 : 16).status(status).build()));
+                    .startDate(i == 1 ? today.minusDays(20) : today.plusDays(3 + i * 4)).maxParticipants(i % 2 == 0 ? 8 : 16).status(status)
+                    .venue(i < 6 ? venues.get(i % 2) : null).build()));
         }
         // Copa en curso: 5 jugadores, round-robin de 10 partidos (6 ya jugados)
         List<TournamentParticipant> active = enroll(tournaments.get(0), users.subList(0, 5));
