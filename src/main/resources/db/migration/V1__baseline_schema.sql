@@ -1,0 +1,65 @@
+-- Esquema base (PostgreSQL) generado a partir de las entidades JPA.
+-- Los cambios posteriores deben agregarse como nuevas migraciones (V2__..., V3__...); no editar este archivo.
+
+create table audit_logs (actor_user_id bigint, created_at timestamp(6) not null, id bigserial not null, resource_id bigint, venue_id bigint, resource_type varchar(60) not null, action varchar(80) not null, actor_email varchar(150), detail varchar(500), primary key (id));
+create table bookings (applied_discount numeric(10,2) not null, base_price numeric(10,2) not null, booking_date date not null, court_id integer not null, dynamic_surcharges numeric(10,2) not null, end_time time(6) not null, hours_deducted numeric(4,2), is_recurrent boolean not null, penalty_amount numeric(10,2), penalty_percentage numeric(3,2), start_time time(6) not null, total_price numeric(10,2) not null, uses_package boolean not null, cancelled_at timestamp(6), checked_in_at timestamp(6), created_at timestamp(6) not null, id bigserial not null, parent_booking_id bigint, payment_deadline timestamp(6), user_id bigint not null, user_package_id bigint, recurrence_frequency varchar(20) check (recurrence_frequency in ('NINGUNA','SEMANAL')), status varchar(20) not null check (status in ('PENDIENTE','CONFIRMADA','CANCELADA','COMPLETADA','NO_SHOW')), check_in_code varchar(36) not null unique, cancellation_reason varchar(500), primary key (id));
+create table court_blocks (active boolean not null, block_date date not null, court_id integer not null, end_time time(6) not null, start_time time(6) not null, id bigserial not null, type varchar(20) not null check (type in ('MANTENIMIENTO','FERIADO','EVENTO')), reason varchar(300) not null, primary key (id));
+create table court_reviews (court_id integer not null, hidden boolean not null, rating integer not null, created_at timestamp(6) not null, id bigserial not null, user_id bigint not null, comment varchar(500), primary key (id), unique (court_id, user_id));
+create table courts (active boolean not null, capacity integer not null check ((capacity<=50) and (capacity>=2)), id serial not null, price_base_hour numeric(10,2) not null, venue_id bigint, sport_type varchar(20) not null check (sport_type in ('FULBOL','TENIS','BASQUET','VOLEY','PADEL','SQUASH','BADMINTON','FRONTENIS')), name varchar(100) not null, description varchar(500), primary key (id));
+create table open_match_join_requests (created_at timestamp(6) not null, id bigserial not null, open_match_id bigint not null, user_id bigint not null, status varchar(255) not null check (status in ('PENDIENTE','ACEPTADA','RECHAZADA')), primary key (id), unique (open_match_id, user_id));
+create table open_matches (max_players integer not null, booking_id bigint not null unique, created_at timestamp(6) not null, creator_id bigint not null, id bigserial not null, note varchar(300), status varchar(255) not null check (status in ('ABIERTO','COMPLETO','CERRADO')), primary key (id));
+create table packages (active boolean not null, amount_hours integer not null check ((amount_hours<=100) and (amount_hours>=1)), discount_percent numeric(3,2) not null, price numeric(10,2) not null, validity_days integer not null check ((validity_days<=365) and (validity_days>=1)), id bigserial not null, name varchar(100) not null, primary key (id));
+create table payments (amount numeric(10,2) not null, booking_id bigint not null unique, created_at timestamp(6) not null, id bigserial not null, paid_at timestamp(6), refunded_at timestamp(6), user_id bigint not null, method varchar(20) not null check (method in ('TARJETA','YAPE_PLIN','EFECTIVO')), status varchar(20) not null check (status in ('APROBADO','RECHAZADO','REEMBOLSADO')), operation_code varchar(40) not null unique, rejection_reason varchar(200), primary key (id));
+create table team_invitations (created_at timestamp(6) not null, id bigserial not null, invited_by_id bigint not null, invited_user_id bigint not null, responded_at timestamp(6), team_id bigint not null, status varchar(20) not null check (status in ('PENDIENTE','ACEPTADA','RECHAZADA','CANCELADA')), primary key (id));
+create table team_members (id bigserial not null, joined_at timestamp(6) not null, team_id bigint not null, user_id bigint not null, role varchar(255) not null check (role in ('OWNER','MEMBER')), primary key (id), unique (team_id, user_id));
+create table teams (created_at timestamp(6) not null, id bigserial not null, owner_id bigint not null, name varchar(80) not null, description varchar(300), primary key (id));
+create table tournament_matches (completed boolean not null, score_one integer, score_two integer, id bigserial not null, player_one_id bigint not null, player_two_id bigint not null, tournament_id bigint not null, primary key (id));
+create table tournament_participants (losses integer not null, points integer not null, wins integer not null, id bigserial not null, tournament_id bigint not null, user_id bigint not null, primary key (id), unique (tournament_id, user_id));
+create table tournaments (max_participants integer not null, start_date date not null, created_at timestamp(6) not null, id bigserial not null, venue_id bigint, name varchar(100) not null, sport_type varchar(255) not null check (sport_type in ('FULBOL','TENIS','BASQUET','VOLEY','PADEL','SQUASH','BADMINTON','FRONTENIS')), status varchar(255) not null check (status in ('INSCRIPCION','EN_CURSO','FINALIZADO')), primary key (id));
+create table user_notifications (is_read boolean not null, created_at timestamp(6) not null, id bigserial not null, user_id bigint not null, type varchar(30) not null check (type in ('RESERVA_CREADA','PAGO_APROBADO','PAGO_RECHAZADO','CANCELACION','REPROGRAMACION','CHECK_IN','LISTA_ESPERA','EQUIPO_INVITACION')), title varchar(120) not null, message varchar(500) not null, primary key (id));
+create table user_packages (active boolean not null, initial_hours integer not null check (initial_hours>=1), remaining_hours integer not null check (remaining_hours>=0), expiration_date timestamp(6) not null, id bigserial not null, package_id bigint not null, purchase_date timestamp(6) not null, user_id bigint not null, primary key (id));
+create table users (active boolean not null, token_version integer not null, id bigserial not null, registration_date timestamp(6) not null, venue_id bigint, phone varchar(15) not null, membership_type varchar(20) not null check (membership_type in ('NINGUNA','BASICA','PREMIUN','VIP')), role varchar(20) not null check (role in ('USER','RECEPTIONIST','VENUE_ADMIN','ADMIN','SUPER_ADMIN')), name varchar(100) not null, email varchar(150) not null unique, password varchar(255) not null, primary key (id));
+create table venues (active boolean not null, id bigserial not null, phone varchar(30), name varchar(100) not null unique, address varchar(200) not null, primary key (id));
+create table waiting_list (court_id integer not null, desired_date date not null, desired_end_time time(6) not null, desired_start_time time(6) not null, notified boolean not null, id bigserial not null, notification_date timestamp(6), notification_expiration_date timestamp(6), request_date timestamp(6) not null, user_id bigint not null, primary key (id));
+
+create index idx_audit_created on audit_logs (created_at);
+create index idx_booking_date_time on bookings (booking_date, start_time, end_time);
+create index idx_booking_status on bookings (status);
+create index idx_booking_user on bookings (user_id);
+create index idx_user_package_user on user_packages (user_id);
+create index idx_user_package_active on user_packages (active);
+create index idx_user_package_expiration on user_packages (expiration_date);
+create index idx_waiting_court_date on waiting_list (court_id, desired_date);
+create index idx_waiting_user on waiting_list (user_id);
+create index idx_waiting_notified on waiting_list (notified);
+
+alter table if exists bookings add constraint fk_booking_court foreign key (court_id) references courts;
+alter table if exists bookings add constraint fk_booking_user foreign key (user_id) references users;
+alter table if exists court_blocks add constraint FKl4gcjm61rb23dboo0835fjwfr foreign key (court_id) references courts;
+alter table if exists court_reviews add constraint FKnxkwgq39edr8ui1juo6mfh062 foreign key (court_id) references courts;
+alter table if exists court_reviews add constraint FK27kb70ivvg6c47dv03n93bg0w foreign key (user_id) references users;
+alter table if exists courts add constraint fk_court_venue foreign key (venue_id) references venues;
+alter table if exists open_match_join_requests add constraint FK6r90fymu5esod4lonqrn4mtbp foreign key (open_match_id) references open_matches;
+alter table if exists open_match_join_requests add constraint FK70occdvwxcv122p1gw2fp6f5i foreign key (user_id) references users;
+alter table if exists open_matches add constraint FKk7jjc8n01580voe7w72lvqqbr foreign key (booking_id) references bookings;
+alter table if exists open_matches add constraint FK7gq70ck2kkfkjij9yquhokguk foreign key (creator_id) references users;
+alter table if exists payments add constraint FKc52o2b1jkxttngufqp3t7jr3h foreign key (booking_id) references bookings;
+alter table if exists payments add constraint FKj94hgy9v5fw1munb90tar2eje foreign key (user_id) references users;
+alter table if exists team_invitations add constraint FKnqxer3j4dc7fj8dei8o35xi0 foreign key (invited_by_id) references users;
+alter table if exists team_invitations add constraint FK7l34iko2yklgfxq26dw0atkyu foreign key (invited_user_id) references users;
+alter table if exists team_invitations add constraint FKn2spna496q3cr3fmqc8gda2my foreign key (team_id) references teams;
+alter table if exists team_members add constraint FKtgca08el3ofisywcf11f0f76t foreign key (team_id) references teams;
+alter table if exists team_members add constraint FKee8x7x5026imwmma9kndkxs36 foreign key (user_id) references users;
+alter table if exists teams add constraint FKde03in0noals71lom04bmfgit foreign key (owner_id) references users;
+alter table if exists tournament_matches add constraint FK7iesutrgwqu4cd8fq5aad80nj foreign key (player_one_id) references users;
+alter table if exists tournament_matches add constraint FKsvw1kykho377w2yo31vtkeynw foreign key (player_two_id) references users;
+alter table if exists tournament_matches add constraint FKntwq3hn28yb2475ayat61cpdt foreign key (tournament_id) references tournaments;
+alter table if exists tournament_participants add constraint FK7m4qdyvu9tgkd7phoskg97nn5 foreign key (tournament_id) references tournaments;
+alter table if exists tournament_participants add constraint FKmud5ivd49it9to41ou3tcveiw foreign key (user_id) references users;
+alter table if exists tournaments add constraint FKfbejtwetlh64k4r8qx57modfw foreign key (venue_id) references venues;
+alter table if exists user_notifications add constraint FK9f86wonnl11hos1cuf5fibutl foreign key (user_id) references users;
+alter table if exists user_packages add constraint fk_user_package_package foreign key (package_id) references packages;
+alter table if exists user_packages add constraint fk_user_package_user foreign key (user_id) references users;
+alter table if exists users add constraint fk_user_venue foreign key (venue_id) references venues;
+alter table if exists waiting_list add constraint fk_waiting_court foreign key (court_id) references courts;
+alter table if exists waiting_list add constraint fk_waiting_user foreign key (user_id) references users;

@@ -2,3 +2,7 @@ app:
   security:
     jwt:
       secret: MDEyMzQ1Njc4OUFCQ0RFRjAxMjM0NTY3ODlBQkNERUY=
+  # Los tests usan H2 con create-drop; FlywayMigrationTest lo habilita explicitamente.
+spring:
+  flyway:
+    enabled: false
