@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏟️ Court Reservation API
+# 🏟️ Court Reservation APP
 
 **Backend del sistema de reservas de canchas deportivas multi-sede**
 
